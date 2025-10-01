@@ -16,7 +16,6 @@ import {
   Stack,
   TextField,
   InputAdornment,
-  Grid,
   List,
   ListItem,
   ListItemText,
@@ -29,29 +28,27 @@ import {
   AdminPanelSettings as AdminIcon,
   Poll as PollIcon,
   HowToVote as VoteIcon,
-  Link as LinkIcon,
   Share as ShareIcon,
   Launch as LaunchIcon,
-  Warning as WarningIcon,
   Public as PublicIcon,
   Lock as LockIcon,
   Email as EmailIcon,
   Send as SendIcon,
   PersonAdd as PersonAddIcon,
+  Dashboard as DashboardIcon,
 } from '@mui/icons-material';
 import API from '../services/api';
 
 const PollCreatedSuccess = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { pollId, pollTitle, authMethod, adminToken, creatorEmail, voterEmails = [] } = location.state || {};
+  const { pollId, pollTitle, authMethod, adminToken, creatorEmail, voterEmails = [], slug } = location.state || {};
   
   const [copiedField, setCopiedField] = useState('');
   const [pollData, setPollData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEmbedded, setIsEmbedded] = useState(false);
   
-  // Voter management state
   const [addingVoters, setAddingVoters] = useState(false);
   const [votersAdded, setVotersAdded] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
@@ -59,19 +56,20 @@ const PollCreatedSuccess = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Check if we're embedded based on URL parameter
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const embedded = searchParams.get('embedded') === 'true';
     setIsEmbedded(embedded);
   }, [location.search]);
 
-  // Generate URLs
+  // Generate URLs - use slug if available
   const baseUrl = window.location.origin;
-  const voteUrl = `${baseUrl}/vote/${pollId}`;
-  const resultsUrl = `${baseUrl}/results/${pollId}`;
+  const pollIdentifier = slug || pollId;
+  const voteUrl = `${baseUrl}/vote/${pollIdentifier}`;
+  const resultsUrl = `${baseUrl}/results/${pollIdentifier}`;
   const adminUrl = adminToken ? `${baseUrl}/admin/${pollId}?token=${adminToken}` : `${baseUrl}/admin/${pollId}`;
   const myPollsUrl = creatorEmail ? `${baseUrl}/my-polls/${encodeURIComponent(creatorEmail)}` : null;
+  const shortUrl = slug ? `${baseUrl}/vote/${pollId}` : null;
 
   useEffect(() => {
     const fetchPollData = async () => {
@@ -90,7 +88,6 @@ const PollCreatedSuccess = () => {
     fetchPollData();
   }, [pollId]);
 
-  // Automatically add voters if this is a private poll with initial emails
   useEffect(() => {
     const addInitialVoters = async () => {
       if (!pollData || !pollData.is_private || !voterEmails.length || votersAdded || !adminToken) {
@@ -102,7 +99,7 @@ const PollCreatedSuccess = () => {
         const response = await API.post(`/polls/${pollId}/voters`, {
           admin_token: adminToken,
           emails: voterEmails,
-          send_invitations: false // Don't auto-send, let user control this
+          send_invitations: false
         });
         
         setVotersAdded(true);
@@ -137,7 +134,7 @@ const PollCreatedSuccess = () => {
     try {
       const response = await API.post(`/polls/${pollId}/send-invitations`, {
         admin_token: adminToken,
-        emails: [] // Empty means send to all uninvited voters
+        emails: []
       });
       
       setSuccess(`Sent ${response.data.sent_to.length} invitation(s). Check MailHog at http://localhost:8025`);
@@ -174,10 +171,8 @@ const PollCreatedSuccess = () => {
 
   return (
     <Box sx={{mt: isEmbedded ? 0 : '134.195px',  minHeight: '100vh' }}>
-    
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={0} sx={{ p: 4 }}>
-        {/* Success Header */}
         <Box display="flex" alignItems="center" mb={3}>
           <CheckCircleIcon sx={{ fontSize: 48, color: 'success.main', mr: 2 }} />
           <Box flex={1}>
@@ -201,109 +196,106 @@ const PollCreatedSuccess = () => {
           {isPublicPoll ? ' Share the voting link below with participants.' : ' Manage your voters and send invitations below.'}
         </Alert>
 
-
-      {/* Private Poll Voter Section - PROFESSIONAL DESIGN */}
-      {isPrivatePoll && voterEmails.length > 0 && (
-        <>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-              <PersonAddIcon sx={{ mr: 1, color: 'text.secondary' }} />
-              Voter Management
-            </Typography>
-            
-            {addingVoters && (
-              <Box display="flex" alignItems="center" gap={2} p={2}>
-                <CircularProgress size={20} />
-                <Typography>Adding voters to your private poll...</Typography>
-              </Box>
-            )}
-            
-            {votersAdded && voterStats && (
-              <Card variant="outlined" sx={{ backgroundColor: '#fafafa', borderColor: '#e0e0e0', mb: 2 }}>
-                <CardContent>
-                  <Typography variant="body1" sx={{ mb: 2 }}>
-                    <strong>{voterStats.added} voter(s)</strong> have been added to your private poll.
-                    {voterStats.duplicates > 0 && ` (${voterStats.duplicates} duplicates skipped)`}
-                  </Typography>
-                  
-                  <Box sx={{ backgroundColor: 'white', p: 2, borderRadius: 1, mb: 2 }}>
-                    <List dense>
-                      {voterEmails.slice(0, 5).map((email, idx) => (
-                        <ListItem key={idx}>
-                          <ListItemIcon>
-                            <EmailIcon fontSize="small" color="action" />
-                          </ListItemIcon>
-                          <ListItemText primary={email} />
-                        </ListItem>
-                      ))}
-                      {voterEmails.length > 5 && (
-                        <ListItem>
-                          <ListItemText 
-                            primary={`...and ${voterEmails.length - 5} more`}
-                            sx={{ pl: 5, color: 'text.secondary' }}
-                          />
-                        </ListItem>
-                      )}
-                    </List>
-                  </Box>
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Stack direction="row" spacing={2}>
-                    <Button
-                      variant="contained"
-                      startIcon={sendingInvites ? <CircularProgress size={16} /> : <SendIcon />}
-                      onClick={handleSendInvitations}
-                      disabled={sendingInvites}
-                      fullWidth
-                      sx={{
-                        backgroundColor: '#1976d2',
-                        '&:hover': {
-                          backgroundColor: '#1565c0',
-                        }
-                      }}
-                    >
-                      {sendingInvites ? 'Sending...' : 'Send Email Invitations'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<AdminIcon />}
-                      onClick={() => window.open(adminUrl, '_blank')}
-                      fullWidth
-                      sx={{ 
-                        borderColor: '#bdbdbd',
-                        color: 'text.primary'
-                      }}
-                    >
-                      Manage in Admin Panel
-                    </Button>
-                  </Stack>
-                  
-                  {!sendingInvites && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Note: Emails will appear in MailHog at http://localhost:8025
+        {isPrivatePoll && voterEmails.length > 0 && (
+          <>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <PersonAddIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                Voter Management
+              </Typography>
+              
+              {addingVoters && (
+                <Box display="flex" alignItems="center" gap={2} p={2}>
+                  <CircularProgress size={20} />
+                  <Typography>Adding voters to your private poll...</Typography>
+                </Box>
+              )}
+              
+              {votersAdded && voterStats && (
+                <Card variant="outlined" sx={{ backgroundColor: '#fafafa', borderColor: '#e0e0e0', mb: 2 }}>
+                  <CardContent>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                      <strong>{voterStats.added} voter(s)</strong> have been added to your private poll.
+                      {voterStats.duplicates > 0 && ` (${voterStats.duplicates} duplicates skipped)`}
                     </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Success/Error Messages */}
-            {error && (
-              <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-            {success && (
-              <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>
-                {success}
-              </Alert>
-            )}
-          </Box>
-          <Divider sx={{ my: 3 }} />
-        </>
-      )}
-        {/* Quick Action Buttons */}
+                    
+                    <Box sx={{ backgroundColor: 'white', p: 2, borderRadius: 1, mb: 2 }}>
+                      <List dense>
+                        {voterEmails.slice(0, 5).map((email, idx) => (
+                          <ListItem key={idx}>
+                            <ListItemIcon>
+                              <EmailIcon fontSize="small" color="action" />
+                            </ListItemIcon>
+                            <ListItemText primary={email} />
+                          </ListItem>
+                        ))}
+                        {voterEmails.length > 5 && (
+                          <ListItem>
+                            <ListItemText 
+                              primary={`...and ${voterEmails.length - 5} more`}
+                              sx={{ pl: 5, color: 'text.secondary' }}
+                            />
+                          </ListItem>
+                        )}
+                      </List>
+                    </Box>
+                    
+                    <Divider sx={{ my: 2 }} />
+                    
+                    <Stack direction="row" spacing={2}>
+                      <Button
+                        variant="contained"
+                        startIcon={sendingInvites ? <CircularProgress size={16} /> : <SendIcon />}
+                        onClick={handleSendInvitations}
+                        disabled={sendingInvites}
+                        fullWidth
+                        sx={{
+                          backgroundColor: '#1976d2',
+                          '&:hover': {
+                            backgroundColor: '#1565c0',
+                          }
+                        }}
+                      >
+                        {sendingInvites ? 'Sending...' : 'Send Email Invitations'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<AdminIcon />}
+                        onClick={() => window.open(adminUrl, '_blank')}
+                        fullWidth
+                        sx={{ 
+                          borderColor: '#bdbdbd',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Manage in Admin Panel
+                      </Button>
+                    </Stack>
+                    
+                    {!sendingInvites && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                        Note: Emails will appear in MailHog at http://localhost:8025
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {error && (
+                <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+              {success && (
+                <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>
+                  {success}
+                </Alert>
+              )}
+            </Box>
+            <Divider sx={{ my: 3 }} />
+          </>
+        )}
+
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom>
             Quick Actions
@@ -362,7 +354,6 @@ const PollCreatedSuccess = () => {
 
         <Divider sx={{ my: 3 }} />
 
-        {/* Share Section - Only for Public Polls */}
         {isPublicPoll && (
           <>
             <Box sx={{ mb: 4 }}>
@@ -371,7 +362,7 @@ const PollCreatedSuccess = () => {
                 Share Your Poll
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                Copy this link to share your poll with voters:
+                {slug ? 'Your custom URL:' : 'Copy this link to share your poll with voters:'}
               </Typography>
               <Card variant="outlined" sx={{ backgroundColor: 'rgba(76, 175, 80, 0.08)', borderColor: 'success.main' }}>
                 <CardContent>
@@ -399,6 +390,39 @@ const PollCreatedSuccess = () => {
                       }
                     }}
                   />
+                  {slug && (
+                    <Box mt={2}>
+                      <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                        Or use the short link:
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={shortUrl}
+                        InputProps={{
+                          readOnly: true,
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Tooltip title={copiedField === 'short' ? 'Copied!' : 'Copy short link'}>
+                                <IconButton
+                                  onClick={() => copyToClipboard(shortUrl, 'short')}
+                                  edge="end"
+                                  size="small"
+                                  color={copiedField === 'short' ? 'success' : 'default'}
+                                >
+                                  <CopyIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </InputAdornment>
+                          ),
+                          sx: {
+                            fontFamily: 'monospace',
+                            backgroundColor: 'background.paper',
+                          }
+                        }}
+                      />
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             </Box>
@@ -406,8 +430,40 @@ const PollCreatedSuccess = () => {
           </>
         )}
 
-        {/* Admin Access Section - simplified, rest of component continues as before... */}
-        {/* Navigation buttons, etc... */}
+        {myPollsUrl && (
+          <>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <DashboardIcon sx={{ mr: 1, color: 'primary.main' }} />
+                Your Polls Dashboard
+              </Typography>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                You can view and manage all your polls in one place using your personal dashboard.
+              </Alert>
+              <Button
+                variant="contained"
+                startIcon={<DashboardIcon />}
+                endIcon={<LaunchIcon />}
+                onClick={() => window.open(myPollsUrl, '_blank')}
+                size="large"
+                fullWidth
+                sx={{
+                  py: 1.5,
+                  backgroundColor: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  }
+                }}
+              >
+                Go to My Polls Dashboard
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                Bookmark this link to access all your polls anytime
+              </Typography>
+            </Box>
+            <Divider sx={{ my: 3 }} />
+          </>
+        )}
       </Paper>
     </Container>
     </Box>

@@ -13,12 +13,11 @@ import DevTools from './pages/DevTools';
 import Admin from './pages/Admin';
 import HomePage from './pages/Home';
 import NavigationBar from './components/NavigationBar'; 
-import About from './pages/About'; 
-import TestWinnerExplanation from './pages/TestWinnerExplanation'; 
-import Demo from './pages/Demo'; 
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import CSVImportTool  from './pages/CSVImportTool';
+import MyPolls from './pages/MyPolls';
+import DemoVoting from './pages/DemoPage';
 // Component to detect embedding status from URL
 const AppContent = () => {
   const location = useLocation();
@@ -45,8 +44,9 @@ const AppContent = () => {
           <Route path="/vote/:pollId" element={<Vote />} />
           <Route path="/vote-success/:pollId" element={<VoteSuccess />} />
           {/*<Route path="/about" element={<About />} />*/}
-          <Route path="/demo" element={<Demo />} />
+          <Route path="/demo" element={<DemoVoting />} />
           <Route path="/results/:pollId" element={<PollResults />} />
+          <Route path="/my-polls/:email" element={<MyPolls />} />
           <Route path="/admin/:pollId" element={<Admin />} />
           <Route path="/dev" element={<DevTools />} />
         </Routes>

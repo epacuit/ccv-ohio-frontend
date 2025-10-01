@@ -1,7 +1,6 @@
 // hooks/usePoll.js
 import { useState, useEffect, useRef } from 'react';
 import API from '../services/api';
-import { POLL_SLUGS } from '../constants/pollMappings';
 
 export const usePoll = (urlParam) => {
   const [poll, setPoll] = useState(null);
@@ -11,7 +10,8 @@ export const usePoll = (urlParam) => {
   
   const pollingInterval = useRef(null);
   
-  const pollId = POLL_SLUGS[urlParam] || urlParam;
+  // Use urlParam directly - backend handles slug/short_id/UUID resolution
+  const pollId = urlParam;
 
   const loadPoll = async () => {
     try {
@@ -29,7 +29,7 @@ export const usePoll = (urlParam) => {
           }
           return {
             ...candidate,
-            id: candidate.id || `candidate-${index}` // Add ID if missing
+            id: candidate.id || `candidate-${index}`
           };
         });
       }

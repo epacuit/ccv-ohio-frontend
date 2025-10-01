@@ -9,7 +9,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   TextField,
-  Chip,
   Divider,
 } from '@mui/material';
 import {
@@ -18,21 +17,16 @@ import {
   Public as PublicIcon,
   Lock as LockIcon,
   Link as LinkIcon,
-  Info as InfoIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import API from '../services/api';
 
-// Import shared components
 import PollForm from '../components/shared/PollForm';
 import EmailListInput from '../components/shared/EmailListInput';
 
-import VotingSettings from '../components/shared/VotingSettings';
-
-// Poll Type Selection Component
 const PollTypeSelector = ({ pollType, onChange }) => (
   <Box mt={3} mb={3}>
     <Typography variant="h6" gutterBottom>
@@ -65,14 +59,8 @@ const PollTypeSelector = ({ pollType, onChange }) => (
       </ToggleButton>
     </ToggleButtonGroup>
 
-    {/* Poll Type Info Cards */}
     <Collapse in={pollType === 'public'}>
-      <Box sx={{ 
-        backgroundColor: 'rgba(25, 118, 210, 0.08)', 
-        borderRadius: 2,
-        p: 2,
-        mb: 2
-      }}>
+      <Box sx={{ backgroundColor: 'rgba(25, 118, 210, 0.08)', borderRadius: 2, p: 2, mb: 2 }}>
         <Typography variant="body2" color="text.primary" gutterBottom>
           <strong>Public Poll Features:</strong>
         </Typography>
@@ -87,12 +75,7 @@ const PollTypeSelector = ({ pollType, onChange }) => (
     </Collapse>
 
     <Collapse in={pollType === 'private'}>
-      <Box sx={{ 
-        backgroundColor: 'rgba(237, 108, 2, 0.08)', 
-        borderRadius: 2,
-        p: 2,
-        mb: 2
-      }}>
+      <Box sx={{ backgroundColor: 'rgba(237, 108, 2, 0.08)', borderRadius: 2, p: 2, mb: 2 }}>
         <Typography variant="body2" color="text.primary" gutterBottom>
           <strong>Private Poll Features:</strong>
         </Typography>
@@ -109,7 +92,6 @@ const PollTypeSelector = ({ pollType, onChange }) => (
   </Box>
 );
 
-// Auth Method Selector Component
 const AuthMethodSelector = ({ authMethod, onChange, formData, onFormDataChange, errors, refs }) => (
   <Box mt={3} mb={3}>
     <Typography variant="h6" gutterBottom>
@@ -155,14 +137,8 @@ const AuthMethodSelector = ({ authMethod, onChange, formData, onFormDataChange, 
       </ToggleButton>
     </ToggleButtonGroup>
 
-    {/* Auth Method Specific Fields */}
     <Collapse in={authMethod === 'password'}>
-      <Box sx={{ 
-        backgroundColor: 'rgba(237, 108, 2, 0.08)', 
-        borderRadius: 2,
-        p: 2,
-        mb: 2 
-      }}>
+      <Box sx={{ backgroundColor: 'rgba(237, 108, 2, 0.08)', borderRadius: 2, p: 2, mb: 2 }}>
         <TextField
           fullWidth
           type="password"
@@ -217,6 +193,11 @@ const AuthMethodSelector = ({ authMethod, onChange, formData, onFormDataChange, 
             </ul>
           </Typography>
         </Alert>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          <Typography variant="body2" component="div">
+            <strong>Security Note:</strong> Anyone who knows your email address can access your dashboard and view all your polls. For sensitive polls, use "Link Only" or "Custom Password" instead.
+          </Typography>
+        </Alert>
       </Box>
     </Collapse>
 
@@ -231,18 +212,63 @@ const AuthMethodSelector = ({ authMethod, onChange, formData, onFormDataChange, 
   </Box>
 );
 
+const SlugInput = ({ formData, onFormDataChange, errors, refs, showSlugInput }) => {
+  if (!showSlugInput) return null;
+
+  return (
+    <Box mt={3} mb={3}>
+      <Box sx={{ 
+        backgroundColor: 'rgba(156, 39, 176, 0.08)', 
+        borderRadius: 2,
+        p: 2,
+        border: '2px dashed rgba(156, 39, 176, 0.3)'
+      }}>
+        <Typography variant="h6" gutterBottom sx={{ color: 'primary.main' }}>
+          Custom URL Slug (Admin Only)
+        </Typography>
+        <TextField
+          fullWidth
+          label="Custom Slug (Optional)"
+          value={formData.slug}
+          onChange={(e) => {
+            const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+            onFormDataChange({ slug });
+          }}
+          helperText="Create a custom URL like: /vote/your-custom-slug (letters, numbers, and hyphens only)"
+          margin="normal"
+          error={errors.slug}
+          inputRef={(el) => {
+            if (refs.current) refs.current.slug = el;
+          }}
+          placeholder="my-custom-poll"
+        />
+        <Alert severity="info" sx={{ mt: 2 }}>
+          <Typography variant="body2">
+            <strong>How it works:</strong> If you enter "my-poll", your poll will be available at both:
+            <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+              <li>/vote/ABC123 (auto-generated)</li>
+              <li>/vote/my-poll (your custom slug)</li>
+            </ul>
+          </Typography>
+        </Alert>
+      </Box>
+    </Box>
+  );
+};
 
 const CreatePoll = ({ isEmbedded = false }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const errorRefs = useRef({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [showValidationError, setShowValidationError] = useState(false); // ADD THIS LINE
-  const [, forceUpdate] = useReducer(x => x + 1, 0); // ADD THIS FOR FORCE UPDATE
+  const [showValidationError, setShowValidationError] = useState(false);
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
   
-  // Form state
+  const showSlugInput = searchParams.get('admin') === 'true';
+  
   const [pollType, setPollType] = useState('public');
   const [authMethod, setAuthMethod] = useState('none');
   const [formData, setFormData] = useState({
@@ -257,6 +283,7 @@ const CreatePoll = ({ isEmbedded = false }) => {
     closing_datetime: null,
     admin_password: '',
     creator_email: '',
+    slug: '',
     settings: {
       allow_ties: true,
       require_complete_ranking: false,
@@ -266,17 +293,9 @@ const CreatePoll = ({ isEmbedded = false }) => {
       show_rankings: true,
       results_visibility: 'public',
       can_view_before_close: false,
-      // num_ranks: undefined, // REMOVED - let PollForm calculate it
     },
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log('[DEBUG] State updated - showValidationError:', showValidationError);
-    console.log('[DEBUG] State updated - fieldErrors:', fieldErrors);
-  }, [showValidationError, fieldErrors]);
-
-  // Handle poll type change
   const handlePollTypeChange = (event, newType) => {
     if (newType !== null) {
       setPollType(newType);
@@ -291,7 +310,6 @@ const CreatePoll = ({ isEmbedded = false }) => {
     }
   };
 
-  // Handle auth method change
   const handleAuthMethodChange = (event, newMethod) => {
     if (newMethod !== null) {
       setAuthMethod(newMethod);
@@ -303,75 +321,38 @@ const CreatePoll = ({ isEmbedded = false }) => {
     }
   };
 
-  // Handle form data changes
   const handleFormDataChange = (updates) => {
     setFormData({ ...formData, ...updates });
-    
-    // Clear relevant errors
     Object.keys(updates).forEach(key => {
       if (fieldErrors[key]) {
         setFieldErrors({ ...fieldErrors, [key]: false });
       }
     });
     setShowValidationError(false);
+    // Clear server error when user makes changes
+    if (error) setError('');
   };
 
-  // Email management
-const addEmail = (emailsToAdd) => {
-  // Handle both single email (string) and multiple emails (array)
-  const emails = Array.isArray(emailsToAdd) ? emailsToAdd : [emailsToAdd];
-  
-  // Filter out duplicates
-  const newEmails = emails.filter(email => 
-    !formData.voter_emails.includes(email)
-  );
-  
-  if (newEmails.length > 0) {
-    handleFormDataChange({
-      voter_emails: [...formData.voter_emails, ...newEmails]
-    });
-  }
-};
-const updateEmails = (newEmailList) => {
-  handleFormDataChange({
-    voter_emails: newEmailList
-  });
-};
-
-const updateEmailList = (newEmailList) => {
-  handleFormDataChange({
-    voter_emails: newEmailList
-  });
-};
-
-  const removeEmail = (emailToRemove) => {
-    handleFormDataChange({
-      voter_emails: formData.voter_emails.filter(email => email !== emailToRemove)
-    });
+  const updateEmailList = (newEmailList) => {
+    handleFormDataChange({ voter_emails: newEmailList });
   };
 
-  // Validate form
   const validateForm = () => {
-    console.log('[DEBUG] validateForm called');
     const errors = {};
     
     if (!formData.title.trim()) {
-      console.log('[DEBUG] Title is empty');
       errors.title = true;
     }
     
     const validOptions = formData.options.filter(opt => opt.name.trim() !== '');
-    console.log('[DEBUG] Valid options count:', validOptions.length);
     if (validOptions.length < 2) {
       formData.options.forEach((opt, index) => {
         if (!opt.name.trim()) {
-          console.log(`[DEBUG] Option ${index} is empty`);
           errors[`option_${index}_name`] = true;
         }
       });
     }
     
-    // Check for duplicate option names
     const optionNames = formData.options
       .map(opt => opt.name.trim().toLowerCase())
       .filter(name => name !== '');
@@ -387,7 +368,6 @@ const updateEmailList = (newEmailList) => {
     });
     
     if (duplicates.size > 0) {
-      console.log('[DEBUG] Duplicate names found:', Array.from(duplicates));
       formData.options.forEach((opt, index) => {
         if (duplicates.has(opt.name.trim().toLowerCase())) {
           errors[`option_${index}_name`] = true;
@@ -396,84 +376,53 @@ const updateEmailList = (newEmailList) => {
     }
     
     if (pollType === 'private' && formData.voter_emails.length === 0) {
-      console.log('[DEBUG] Private poll with no emails');
       errors.voter_emails = true;
     }
     
     if (authMethod === 'password' && !formData.admin_password.trim()) {
-      console.log('[DEBUG] Password auth with no password');
       errors.admin_password = true;
     }
     
     if (authMethod === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!formData.creator_email.trim() || !emailRegex.test(formData.creator_email.trim())) {
-        console.log('[DEBUG] Invalid creator email');
         errors.creator_email = true;
       }
     }
     
-    console.log('[DEBUG] Final validation errors:', errors);
     return errors;
   };
 
-  // Focus on first error field
   const focusFirstError = (errors) => {
     const errorKeys = Object.keys(errors);
-    console.log('[DEBUG] focusFirstError - errorKeys:', errorKeys);
-    
     if (errorKeys.length > 0) {
       const firstErrorKey = errorKeys[0];
       const element = errorRefs.current[firstErrorKey];
-      
-      console.log('[DEBUG] First error element:', element);
-      
       if (element) {
         element.focus();
-        
         setTimeout(() => {
           const rect = element.getBoundingClientRect();
           const scrollY = window.scrollY + rect.top - 200;
-          
-          window.scrollTo({
-            top: scrollY,
-            behavior: 'smooth'
-          });
+          window.scrollTo({ top: scrollY, behavior: 'smooth' });
         }, 100);
       }
     }
   };
 
-  // Submit form
-
-
-const handleSubmit = async () => {  // REMOVE: event parameter
-  console.log('[DEBUG] handleSubmit called');
-  // REMOVE: event.preventDefault(); - not needed anymore
-  setError('');
-  setShowValidationError(false);
-  
-  const errors = validateForm();
-  console.log('[DEBUG] Validation errors:', errors);
-  console.log('[DEBUG] Error count:', Object.keys(errors).length);
-  
-  if (Object.keys(errors).length > 0) {
-    console.log('[DEBUG] Form has errors, updating state');
-    setFieldErrors(errors);
-    setShowValidationError(true);
-    forceUpdate();
-    
-    setTimeout(() => {
-      console.log('[DEBUG] After state update - showValidationError should be true');
-      focusFirstError(errors);
-    }, 0);
-    
-    // Don't set error message at top - just return
-    return;
-  }
-    
-    console.log('[DEBUG] Form is valid, proceeding with submission');
+  const handleSubmit = async () => {
     setShowValidationError(false);
+    
+    const errors = validateForm();
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setShowValidationError(true);
+      forceUpdate();
+      setTimeout(() => focusFirstError(errors), 0);
+      return;
+    }
+    
+    setError('');
     setLoading(true);
 
     try {
@@ -484,10 +433,8 @@ const handleSubmit = async () => {  // REMOVE: event parameter
           description: opt.description ? opt.description.trim() : null
         }));
 
-      // Prepare settings with proper num_ranks value
       const settings = {
         ...formData.settings,
-        // Ensure num_ranks is either a number or null (not undefined)
         num_ranks: formData.settings.num_ranks ? parseInt(formData.settings.num_ranks) : null
       };
 
@@ -503,6 +450,8 @@ const handleSubmit = async () => {  // REMOVE: event parameter
         tags: [],
         admin_password: authMethod === 'password' ? formData.admin_password : null,
         creator_email: authMethod === 'email' ? formData.creator_email.trim().toLowerCase() : null,
+        owner_email: authMethod === 'email' ? formData.creator_email.trim().toLowerCase() : null,
+        slug: formData.slug.trim() || null,
       };
 
       const response = await API.post('/polls/', pollData);
@@ -519,7 +468,8 @@ const handleSubmit = async () => {  // REMOVE: event parameter
             authMethod: authMethod,
             adminToken: response.data.admin_token,
             creatorEmail: authMethod === 'email' ? formData.creator_email : null,
-            voterEmails: formData.voter_emails  // ADD THIS LINE!
+            voterEmails: formData.voter_emails,
+            slug: response.data.slug
           }
         });
       }, 1000);
@@ -537,74 +487,73 @@ const handleSubmit = async () => {  // REMOVE: event parameter
       }
       
       setError(errorMessage);
-    } finally {
       setLoading(false);
+      // Scroll to top to show error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-
-  // Debug render
-  console.log('[DEBUG RENDER] showValidationError:', showValidationError);
-  console.log('[DEBUG RENDER] fieldErrors:', fieldErrors);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box sx={{ mt: isEmbedded ? 0 : '134.195px', minHeight: '100vh' }}>
         <Container maxWidth="md" sx={{ py: 4 }}>
-          <Box sx={{  borderRadius: 2, p: { xs: 3, md: 4 } }}>
+          <Box sx={{ borderRadius: 2, p: { xs: 3, md: 4 } }}>
             <Box display="flex" alignItems="center" mb={3}>
-              
               <Typography variant="h3" component="h1">
                 Create a New Poll
               </Typography>
             </Box>
 
-            <Collapse in={error !== ''}>
+            {error && (
               <Alert severity="error" onClose={() => setError('')} sx={{ mb: 3 }}>
                 {error}
               </Alert>
-            </Collapse>
+            )}
 
-            <Collapse in={success}>
+            {success && (
               <Alert severity="success" sx={{ mb: 3 }}>
                 Poll created successfully! Redirecting to poll details...
               </Alert>
-            </Collapse>
+            )}
 
-            <form onSubmit={handleSubmit}>
-              {/* Poll Type Selection */}
-              <PollTypeSelector
-                pollType={pollType}
-                onChange={handlePollTypeChange}
-              />
+            <PollTypeSelector
+              pollType={pollType}
+              onChange={handlePollTypeChange}
+            />
 
-              {/* Auth Method Selection */}
-              <AuthMethodSelector
-                authMethod={authMethod}
-                onChange={handleAuthMethodChange}
-                formData={formData}
-                onFormDataChange={handleFormDataChange}
-                errors={fieldErrors}
-                refs={errorRefs}
-              />
+            <AuthMethodSelector
+              authMethod={authMethod}
+              onChange={handleAuthMethodChange}
+              formData={formData}
+              onFormDataChange={handleFormDataChange}
+              errors={fieldErrors}
+              refs={errorRefs}
+            />
 
-              <Divider sx={{ my: 4, opacity: 0.3 }} />
+            <SlugInput
+              formData={formData}
+              onFormDataChange={handleFormDataChange}
+              errors={fieldErrors}
+              refs={errorRefs}
+              showSlugInput={showSlugInput}
+            />
 
-              {/* Main Poll Form */}
-              <PollForm
-                poll={formData}
-                onChange={handleFormDataChange}
-                isEditing={true}
-                canModifyOptions={true}
-                errors={fieldErrors}
-                isPrivatePoll={formData.is_private}
-                showCompletedToggle={false}
-                refs={errorRefs}
-              />
+            <Divider sx={{ my: 4, opacity: 0.3 }} />
 
-              <Divider sx={{ my: 4, opacity: 0.3 }} />
+            <PollForm
+              poll={formData}
+              onChange={handleFormDataChange}
+              isEditing={true}
+              canModifyOptions={true}
+              errors={fieldErrors}
+              isPrivatePoll={formData.is_private}
+              showCompletedToggle={false}
+              refs={errorRefs}
+            />
 
-              {/* Email Addresses for Private Poll */}
-              <Collapse in={pollType === 'private'}>
+            <Divider sx={{ my: 4, opacity: 0.3 }} />
+
+            <Collapse in={pollType === 'private'}>
               <EmailListInput
                 emails={formData.voter_emails}
                 onChange={updateEmailList}
@@ -615,62 +564,54 @@ const handleSubmit = async () => {  // REMOVE: event parameter
                   if (errorRefs.current) errorRefs.current.voter_emails = el;
                 }}
               />
-              </Collapse>
+            </Collapse>
 
-{/* Submit Button */}
-<Box mt={4}>
-  <Box display="flex" justifyContent="flex-end">
-    <Button
-      type="button"
-      onClick={() => navigate('/')}
-      disabled={loading}
-      sx={{ mr: 2 }}
-    >
-      Cancel
-    </Button>
-    <Button
-      type="button"  // CHANGE: from "submit" to "button"
-      variant="contained"
-      disabled={loading}
-      startIcon={<SaveIcon />}
-      size="large"
-      color={showValidationError ? "error" : "primary"}
-      onClick={(e) => {  // ADD: onClick handler
-        console.log('[DEBUG] Create Poll button clicked!');
-        e.preventDefault();
-        handleSubmit();
-      }}
-    >
-      {loading ? 'Creating...' : 'Create Poll'}
-    </Button>
-  </Box>
-  
-  {/* Error message BELOW the buttons */}
-{/* Error message BELOW the buttons */}
-{showValidationError && (
-  <Box mt={2}>
-    <Alert severity="error">
-      Please fix the following errors:
-      <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
-        {!formData.title.trim() && <li>Poll title is required</li>}
-        {Object.keys(fieldErrors).filter(key => key.startsWith('option_')).length > 0 && (
-          <li>All options must have names, and each name must be unique</li>
-        )}
-        {pollType === 'private' && fieldErrors.voter_emails && (
-          <li>At least one voter email is required for private polls</li>
-        )}
-        {authMethod === 'password' && fieldErrors.admin_password && (
-          <li>Admin password is required</li>
-        )}
-        {authMethod === 'email' && fieldErrors.creator_email && (
-          <li>Valid email address is required</li>
-        )}
-      </ul>
-    </Alert>
-  </Box>
-)}
-</Box>
-            </form>
+            <Box mt={4}>
+              <Box display="flex" justifyContent="flex-end">
+                <Button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  disabled={loading}
+                  sx={{ mr: 2 }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={<SaveIcon />}
+                  size="large"
+                  color={showValidationError ? "error" : "primary"}
+                  onClick={handleSubmit}
+                >
+                  {loading ? 'Creating...' : 'Create Poll'}
+                </Button>
+              </Box>
+              
+              {showValidationError && (
+                <Box mt={2}>
+                  <Alert severity="error">
+                    Please fix the following errors:
+                    <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                      {!formData.title.trim() && <li>Poll title is required</li>}
+                      {Object.keys(fieldErrors).filter(key => key.startsWith('option_')).length > 0 && (
+                        <li>All options must have names, and each name must be unique</li>
+                      )}
+                      {pollType === 'private' && fieldErrors.voter_emails && (
+                        <li>At least one voter email is required for private polls</li>
+                      )}
+                      {authMethod === 'password' && fieldErrors.admin_password && (
+                        <li>Admin password is required</li>
+                      )}
+                      {authMethod === 'email' && fieldErrors.creator_email && (
+                        <li>Valid email address is required</li>
+                      )}
+                    </ul>
+                  </Alert>
+                </Box>
+              )}
+            </Box>
           </Box>
         </Container>
       </Box>
