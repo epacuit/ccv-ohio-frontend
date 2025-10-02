@@ -1,4 +1,4 @@
-// pages/Vote.jsx - Complete file with token support
+// pages/Vote.jsx - Complete file with markdown support
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -45,7 +45,7 @@ import {
 
 // Components
 import API from '../services/api';
-import PollDetails from '../components/PollDetails';
+import PollDetails from '../components/PollDetails'; // Now uses MarkdownRenderer internally
 import VoteInputTable from '../components/vote/VoteInputTable';
 import VotingMatchups from '../components/vote/VotingMatchups';
 import WriteInSection from '../components/vote/WriteInSection';
@@ -486,7 +486,7 @@ const Vote = () => {
             </Alert>
           )}
           
-          {/* Poll Details */}
+          {/* Poll Details - Now with markdown support */}
           {shouldShowPollDetails(poll) && (
             <PollDetails 
               poll={{ ...poll, candidates: displayCandidates.length > 0 ? displayCandidates : poll.candidates }} 

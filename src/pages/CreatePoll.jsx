@@ -26,6 +26,7 @@ import API from '../services/api';
 
 import PollForm from '../components/shared/PollForm';
 import EmailListInput from '../components/shared/EmailListInput';
+import MarkdownHelp from '../components/MarkdownHelp';
 
 const PollTypeSelector = ({ pollType, onChange }) => (
   <Box mt={3} mb={3}>
@@ -265,6 +266,7 @@ const CreatePoll = ({ isEmbedded = false }) => {
   const [success, setSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [showValidationError, setShowValidationError] = useState(false);
+  const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
   const [, forceUpdate] = useReducer(x => x + 1, 0);
   
   const showSlugInput = searchParams.get('admin') === 'true';
@@ -331,6 +333,16 @@ const CreatePoll = ({ isEmbedded = false }) => {
     setShowValidationError(false);
     // Clear server error when user makes changes
     if (error) setError('');
+    
+    // Show markdown help when user starts typing in description fields
+    if (('description' in updates || 'options' in updates) && !showMarkdownHelp) {
+      const hasDescriptionContent = updates.description || 
+        formData.description || 
+        (updates.options || formData.options).some(opt => opt.description);
+      if (hasDescriptionContent) {
+        setShowMarkdownHelp(true);
+      }
+    }
   };
 
   const updateEmailList = (newEmailList) => {
@@ -549,7 +561,13 @@ const CreatePoll = ({ isEmbedded = false }) => {
               isPrivatePoll={formData.is_private}
               showCompletedToggle={false}
               refs={errorRefs}
+              showMarkdownHelp={true}
             />
+
+            {/* Show markdown help if user has entered any description */}
+            {showMarkdownHelp && (
+              <MarkdownHelp defaultExpanded={false} sx={{ mt: 2, mb: 3 }} />
+            )}
 
             <Divider sx={{ my: 4, opacity: 0.3 }} />
 
