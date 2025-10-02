@@ -747,7 +747,7 @@ const ResultsDisplay = ({
                 </Box>
               )}
               
-              {/* Ballot Statistics - UPDATED WITH CLEANER TERMINOLOGY */}
+              {/* Ballot Statistics */}
               {results.statistics && (
                 <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -760,7 +760,7 @@ const ResultsDisplay = ({
                     </Typography>
                   </Box>
                   <Box sx={{ borderRadius: 1, p: 2.5 }}>
-                    {/* Total Voters - Prominent */}
+                    {/* Total Votes - Prominent */}
                     <Box sx={{ 
                       display: 'flex', 
                       alignItems: 'center', 
@@ -775,121 +775,121 @@ const ResultsDisplay = ({
                           {results.statistics.total_votes.toLocaleString()}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          Total Voters
+                          Total Votes
                         </Typography>
                       </Box>
                     </Box>
                     
-                    {/* Voting Patterns - Single Column Layout */}
+                    {/* Ballot Types - Only 4 Statistics */}
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                      VOTING PATTERNS
+                      BALLOT TYPES
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {results.statistics.ranked_almost_all !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 48, 
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: alpha(theme.palette.success.main, 0.15),
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                                {results.statistics.ranked_almost_all}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Ranked (almost) all candidates
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                      {results.statistics.linear_orders !== undefined && (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ 
+                            width: 48, 
+                            height: 40, 
+                            borderRadius: 1,
+                            bgcolor: alpha(theme.palette.primary.main, 0.15),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 1.5
+                          }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                              {Math.round((results.statistics.linear_orders / results.statistics.total_votes) * 100)}%
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            All except possibly 1 candidate
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              Linear orders
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {results.statistics.linear_orders.toLocaleString()} ballots
+                            </Typography>
+                          </Box>
                         </Box>
                       )}
                       
-                      {results.statistics.partial_ranking !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 48, 
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: alpha(theme.palette.info.main, 0.1),
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'info.main' }}>
-                                {results.statistics.partial_ranking}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Submitted a partial ranking
+                      {results.statistics.all_candidates_ranked !== undefined && (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ 
+                            width: 48, 
+                            height: 40, 
+                            borderRadius: 1,
+                            bgcolor: alpha(theme.palette.info.main, 0.1),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 1.5
+                          }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'info.main' }}>
+                              {Math.round((results.statistics.all_candidates_ranked / results.statistics.total_votes) * 100)}%
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            Left at least 2 candidates unranked
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              All candidates ranked
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {results.statistics.all_candidates_ranked.toLocaleString()} ballots
+                            </Typography>
+                          </Box>
                         </Box>
                       )}
                       
-                      {results.statistics.had_gaps !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 48, 
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: alpha(theme.palette.warning.main, 0.1),
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.main' }}>
-                                {results.statistics.had_gaps}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Ballots had gaps
+                      {results.statistics.bullet_votes !== undefined && (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ 
+                            width: 48, 
+                            height: 40, 
+                            borderRadius: 1,
+                            bgcolor: alpha(theme.palette.warning.main, 0.1),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 1.5
+                          }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                              {Math.round((results.statistics.bullet_votes / results.statistics.total_votes) * 100)}%
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            Skipped ranks in sequence
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              Bullet votes
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {results.statistics.bullet_votes.toLocaleString()} ballots
+                            </Typography>
+                          </Box>
                         </Box>
                       )}
                       
-                      {results.statistics.single_choice_only !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 48, 
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: 'grey.100',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                {results.statistics.single_choice_only}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Bullet vote
+                      {results.statistics.has_skipped_ranks !== undefined && (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box sx={{ 
+                            width: 48, 
+                            height: 40, 
+                            borderRadius: 1,
+                            bgcolor: 'grey.100',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 1.5
+                          }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                              {Math.round((results.statistics.has_skipped_ranks / results.statistics.total_votes) * 100)}%
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            Ranked only first choice
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              Skipped ranks
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {results.statistics.has_skipped_ranks.toLocaleString()} ballots
+                            </Typography>
+                          </Box>
                         </Box>
                       )}
                     </Box>
@@ -905,9 +905,9 @@ const ResultsDisplay = ({
                         textAlign: 'center'
                       }}
                     >
-                      Note: Categories can overlap
+                      Note: Ballots can have multiple characteristics
                       <br />
-                      (e.g., a ballot can be both partial and have gaps)
+                      (e.g., both linear order and all candidates ranked)
                     </Typography>
                     
                     {/* View Ballots button */}
