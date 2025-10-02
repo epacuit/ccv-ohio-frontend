@@ -16,6 +16,7 @@ import {
   IconButton
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import MarkdownRenderer from '../MarkdownRenderer';
 
 // Inline component for truncated names with tooltip including description
 const CandidateName = ({ name, description, maxWidth = 150 }) => {
@@ -28,16 +29,37 @@ const CandidateName = ({ name, description, maxWidth = 150 }) => {
     }
   }, [name]);
   
-  // Build tooltip content with name and description
+  // Build tooltip content with name and description (with markdown support)
   const tooltipContent = (
-    <Box>
-      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+    <Box sx={{ p: 0.5 }}>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          fontWeight: 'bold', 
+          mb: 0.5,
+          color: '#fff'  // Explicit white text
+        }}
+      >
         {name}
       </Typography>
       {description && (
-        <Typography variant="caption" sx={{ mt: 0.5, display: 'block' }}>
-          {description}
-        </Typography>
+        <Box sx={{ 
+          '& *': { color: '#fff !important' },  // Force all text white
+          '& a': { 
+            color: '#90caf9 !important',  // Light blue for links
+            textDecoration: 'underline !important'
+          },
+          '& p': { margin: 0 }
+        }}>
+          <MarkdownRenderer 
+            content={description}
+            variant="caption"
+            sx={{ 
+              color: '#fff',
+              '& p': { mb: 0 }
+            }}
+          />
+        </Box>
       )}
     </Box>
   );
@@ -60,7 +82,27 @@ const CandidateName = ({ name, description, maxWidth = 150 }) => {
   
   // Show tooltip if overflowing OR if there's a description
   return (isOverflowing || description) ? (
-    <Tooltip title={tooltipContent} placement="top" arrow>{content}</Tooltip>
+    <Tooltip 
+      title={tooltipContent} 
+      placement="top" 
+      arrow
+      componentsProps={{
+        tooltip: {
+          sx: {
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',  // Dark background with high opacity
+            color: '#fff',  // White text
+            border: '1px solid rgba(255, 255, 255, 0.1)',  // Subtle border
+            fontSize: '0.875rem',
+            maxWidth: 400,  // Wider tooltips for descriptions
+            '& .MuiTooltip-arrow': {
+              color: 'rgba(0, 0, 0, 0.95)',
+            }
+          }
+        }
+      }}
+    >
+      {content}
+    </Tooltip>
   ) : content;
 };
 

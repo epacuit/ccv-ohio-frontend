@@ -18,6 +18,7 @@ import ScrollToTop from './components/ScrollToTop';
 import CSVImportTool  from './pages/CSVImportTool';
 import MyPolls from './pages/MyPolls';
 import DemoPage from './pages/DemoPage';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 // Component to detect embedding status from URL
 const AppContent = () => {
   const location = useLocation();
@@ -49,6 +50,8 @@ const AppContent = () => {
           <Route path="/my-polls/:email" element={<MyPolls />} />
           <Route path="/admin/:pollId" element={<Admin />} />
           <Route path="/dev" element={<DevTools />} />
+          <Route path="/super-admin" element={<SuperAdminDashboard />} />
+
         </Routes>
       </Box>
       
