@@ -9,7 +9,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TableContainer,  // <-- ADD THIS
+  TableContainer,
   Typography,
   Box,
   Alert,
@@ -40,7 +40,8 @@ import {
   LockOpen,
   Email,
   Link as LinkIcon,
-  CalendarToday
+  CalendarToday,
+  DeleteSweep
 } from '@mui/icons-material';
 import API from '../services/api';
 
@@ -56,6 +57,7 @@ const SuperAdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [deleteDialog, setDeleteDialog] = useState({ open: false, poll: null });
+  const [deleteTestDialog, setDeleteTestDialog] = useState(false);
   
   // Pagination
   const [page, setPage] = useState(0);
@@ -119,6 +121,20 @@ const SuperAdminDashboard = () => {
       fetchAllPolls(); // Refresh the list
     } catch (err) {
       setError('Error deleting poll');
+    }
+  };
+  
+  const deleteAllTestPolls = async () => {
+    try {
+      const response = await API.delete('/admin/delete-test-polls', {
+        params: { password }
+      });
+      setSuccess(response.data.message);
+      setDeleteTestDialog(false);
+      fetchAllPolls(); // Refresh the list
+    } catch (err) {
+      setError('Error deleting test polls');
+      setDeleteTestDialog(false);
     }
   };
   
@@ -245,10 +261,11 @@ const SuperAdminDashboard = () => {
                 {poll.owner_email ? (
                   <Tooltip title={poll.owner_email}>
                     <Chip 
-                      icon={<Email fontSize="small" />}
+                      icon={<Email />}
                       label={poll.owner_email.split('@')[0]}
                       size="small"
                       variant="outlined"
+                      onClick={() => copyToClipboard(poll.owner_email, 'Email')}
                     />
                   </Tooltip>
                 ) : '-'}
@@ -262,12 +279,12 @@ const SuperAdminDashboard = () => {
                 <Chip 
                   label={poll.status}
                   size="small"
-                  color={poll.status === 'active' ? 'success' : 'default'}
-                  icon={poll.is_private ? <Lock fontSize="small" /> : <LockOpen fontSize="small" />}
+                  color={poll.status === 'open' ? 'success' : 'default'}
                 />
+                {poll.is_private && <Lock fontSize="small" sx={{ ml: 0.5, verticalAlign: 'middle' }} />}
               </TableCell>
               <TableCell align="center">
-                <Chip label={poll.ballot_count} size="small" variant="outlined" />
+                <Chip label={poll.ballot_count} size="small" />
               </TableCell>
               <TableCell>
                 <Box display="flex" gap={0.5}>
@@ -331,13 +348,23 @@ const SuperAdminDashboard = () => {
           <Typography variant="h4" fontWeight="bold">
             Super Admin Dashboard
           </Typography>
-          <Button
-            startIcon={<Refresh />}
-            onClick={fetchAllPolls}
-            variant="outlined"
-          >
-            Refresh
-          </Button>
+          <Box display="flex" gap={1}>
+            <Button
+              startIcon={<DeleteSweep />}
+              onClick={() => setDeleteTestDialog(true)}
+              variant="outlined"
+              color="error"
+            >
+              Delete Test Polls
+            </Button>
+            <Button
+              startIcon={<Refresh />}
+              onClick={fetchAllPolls}
+              variant="outlined"
+            >
+              Refresh
+            </Button>
+          </Box>
         </Box>
         
         {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -483,7 +510,7 @@ const SuperAdminDashboard = () => {
           </Paper>
         )}
         
-        {/* Delete Confirmation Dialog */}
+        {/* Delete Single Poll Confirmation Dialog */}
         <Dialog
           open={deleteDialog.open}
           onClose={() => setDeleteDialog({ open: false, poll: null })}
@@ -505,6 +532,34 @@ const SuperAdminDashboard = () => {
               variant="contained"
             >
               Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+        
+        {/* Delete All Test Polls Confirmation Dialog */}
+        <Dialog
+          open={deleteTestDialog}
+          onClose={() => setDeleteTestDialog(false)}
+        >
+          <DialogTitle>Delete All Test Polls</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete ALL test polls (where is_test = true)?
+              This will permanently delete all test polls and their associated ballots and results.
+              This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteTestDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={deleteAllTestPolls}
+              color="error"
+              variant="contained"
+              startIcon={<DeleteSweep />}
+            >
+              Delete All Test Polls
             </Button>
           </DialogActions>
         </Dialog>

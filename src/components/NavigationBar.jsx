@@ -55,6 +55,7 @@ const NavigationBar = () => {
   const menuItems = [
     { label: 'Home', path: '/' },
     { label: 'Create', path: '/create' },
+    { label: 'About', path: '/about' },
   ];
 
   // Desktop menu button styles

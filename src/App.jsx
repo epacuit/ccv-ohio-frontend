@@ -18,6 +18,8 @@ import ScrollToTop from './components/ScrollToTop';
 import CSVImportTool  from './pages/CSVImportTool';
 import MyPolls from './pages/MyPolls';
 import DemoPage from './pages/DemoPage';
+import AboutPage from './pages/About';
+
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 // Component to detect embedding status from URL
 const AppContent = () => {
@@ -44,7 +46,7 @@ const AppContent = () => {
           <Route path="/poll-created" element={<PollCreatedSuccess />} />
           <Route path="/vote/:pollId" element={<Vote />} />
           <Route path="/vote-success/:pollId" element={<VoteSuccess />} />
-          {/*<Route path="/about" element={<About />} />*/}
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/demo" element={<DemoPage />} />
           <Route path="/results/:pollId" element={<PollResults />} />
           <Route path="/my-polls/:email" element={<MyPolls />} />

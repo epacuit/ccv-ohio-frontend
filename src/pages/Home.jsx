@@ -48,6 +48,7 @@ const HomePage = () => {
   const menuItems = [
     { label: 'Home', path: '/' },
     { label: 'Create', path: '/create' },
+    { label: 'About', path: '/about' },
   ];
   
   const menuButtonStyles = (path) => ({

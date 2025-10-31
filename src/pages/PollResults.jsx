@@ -23,6 +23,7 @@ const PollResults = () => {
   const [results, setResults] = useState(null);
   const [poll, setPoll] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Generate share URL
   const shareUrl = `${window.location.origin}/results/${pollId}`;
@@ -79,13 +80,27 @@ const PollResults = () => {
       setPoll(pollResponse.data);
       setResults(resultsResponse.data);
       setError('');
+      setRetryCount(0); // Reset on success
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Failed to load results. Please try again.');
+      
+      const errorMessage = err.response?.data?.detail || 'Failed to load results. Please try again.';
+      setError(errorMessage);
+      
+      // Only auto-retry if it's specifically about calculation AND under retry limit
+      if (err.response?.status === 503 && 
+          errorMessage.toLowerCase().includes('calculat') &&
+          retryCount < 5) { // Max 5 retries
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          fetchData();
+        }, 3000);
+      }
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchData();
