@@ -103,7 +103,7 @@ const AboutPage = () => {
   const [demoSelections, setDemoSelections] = useState({});
   const demoSettings = useMemo(
     () => ({
-      allow_ties: false,
+      allow_ties: true,
       require_complete_ranking: false,
       num_ranks: demoCandidates.length,
       ballot_processing_rule: BALLOT_PROCESSING_RULES.ALASKA, // uses skipped-rank logic as requested
