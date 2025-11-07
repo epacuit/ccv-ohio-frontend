@@ -78,7 +78,7 @@ const HomePage = () => {
   const demoPolls = [
     {
       title: "Alaska 2022 Special General Election",
-      description: "Experience Consensus Choice Voting with real election data",
+      description: "Experience Consensus Choice with real election data",
       link: "/results/alaska2022",
     },
     {
@@ -247,7 +247,7 @@ const HomePage = () => {
               textShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
           >
-            Consensus Choice Voting
+            Consensus Choice
           </Typography>
           
           {/* Better Choices Link */}

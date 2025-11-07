@@ -379,7 +379,7 @@ const DemoPage = () => {
           {/* Header */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
-              Consensus Choice Voting Demo
+              Consensus Choice Demo
             </Typography>
             <Typography variant="h6" color="text.secondary">
               Explore how pairwise comparisons find the candidate with the broadest support

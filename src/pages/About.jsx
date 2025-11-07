@@ -275,7 +275,7 @@ const AboutPage = () => {
             gutterBottom
             sx={{ fontWeight: 700, color: textColor, mb: 2 }}
           >
-            How Consensus Choice Voting Works
+            How Consensus Choice  Works
           </Typography>
           <Typography
             variant="h6"

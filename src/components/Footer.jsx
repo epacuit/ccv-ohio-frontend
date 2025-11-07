@@ -23,7 +23,7 @@ const Footer = () => {
             color: 'rgba(255, 255, 255, 0.9)',
           }}
         >
-          For more information about Consensus Choice Voting, visit{' '}
+          For more information about Consensus Choice, visit{' '}
           <Link 
             href="https://betterchoices.vote" 
             target="_blank" 
