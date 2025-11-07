@@ -17,6 +17,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@fingerprintjs/fingerprintjs": "^5.0.1",
     "@fontsource/almarai": "^5.2.5",
     "@fontsource/gloock": "^5.2.5",
     "@fontsource/montserrat": "^5.2.5",

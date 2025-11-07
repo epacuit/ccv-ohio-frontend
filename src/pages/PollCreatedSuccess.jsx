@@ -354,32 +354,108 @@ const PollCreatedSuccess = () => {
 
         <Divider sx={{ my: 3 }} />
 
-        {isPublicPoll && (
-          <>
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                <ShareIcon sx={{ mr: 1, color: 'success.main' }} />
-                Share Your Poll
+        {/* HIGHLIGHTED ADMIN LINK SECTION */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+            <AdminIcon sx={{ mr: 1, color: 'warning.main' }} />
+            Admin Link - Save This!
+          </Typography>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <strong>Important:</strong> Save this admin link to manage your poll settings, view detailed analytics, and control your poll. You'll need it to make any changes later.
+          </Alert>
+          <Card variant="outlined" sx={{ backgroundColor: 'rgba(255, 152, 0, 0.08)', borderColor: 'warning.main' }}>
+            <CardContent>
+              <TextField
+                fullWidth
+                value={adminUrl}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title={copiedField === 'admin' ? 'Copied!' : 'Copy admin link'}>
+                        <IconButton
+                          onClick={() => copyToClipboard(adminUrl, 'admin')}
+                          edge="end"
+                          color={copiedField === 'admin' ? 'success' : 'default'}
+                        >
+                          <CopyIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    fontFamily: 'monospace',
+                    backgroundColor: 'background.paper',
+                  }
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                💡 Tip: Bookmark this page or save the admin link. Without it, you won't be able to modify poll settings or add/remove voters.
               </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                {slug ? 'Your custom URL:' : 'Copy this link to share your poll with voters:'}
-              </Typography>
-              <Card variant="outlined" sx={{ backgroundColor: 'rgba(76, 175, 80, 0.08)', borderColor: 'success.main' }}>
-                <CardContent>
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        {/* HIGHLIGHTED VOTING LINK SECTION */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+            <VoteIcon sx={{ mr: 1, color: 'success.main' }} />
+            Voting Link
+          </Typography>
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {isPublicPoll 
+              ? 'Share this link with anyone you want to vote in your poll.'
+              : 'Share this link with your invited voters so they can cast their ballots.'}
+          </Alert>
+          <Card variant="outlined" sx={{ backgroundColor: 'rgba(76, 175, 80, 0.08)', borderColor: 'success.main' }}>
+            <CardContent>
+              <TextField
+                fullWidth
+                value={voteUrl}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title={copiedField === 'vote' ? 'Copied!' : 'Copy voting link'}>
+                        <IconButton
+                          onClick={() => copyToClipboard(voteUrl, 'vote')}
+                          edge="end"
+                          color={copiedField === 'vote' ? 'success' : 'default'}
+                        >
+                          <CopyIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    fontFamily: 'monospace',
+                    backgroundColor: 'background.paper',
+                  }
+                }}
+              />
+              {slug && (
+                <Box mt={2}>
+                  <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                    Short link:
+                  </Typography>
                   <TextField
                     fullWidth
-                    value={voteUrl}
+                    size="small"
+                    value={shortUrl}
                     InputProps={{
                       readOnly: true,
                       endAdornment: (
                         <InputAdornment position="end">
-                          <Tooltip title={copiedField === 'share' ? 'Copied!' : 'Copy link'}>
+                          <Tooltip title={copiedField === 'short' ? 'Copied!' : 'Copy short link'}>
                             <IconButton
-                              onClick={() => copyToClipboard(voteUrl, 'share')}
+                              onClick={() => copyToClipboard(shortUrl, 'short')}
                               edge="end"
-                              color={copiedField === 'share' ? 'success' : 'default'}
+                              size="small"
+                              color={copiedField === 'short' ? 'success' : 'default'}
                             >
-                              <CopyIcon />
+                              <CopyIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                         </InputAdornment>
@@ -390,45 +466,60 @@ const PollCreatedSuccess = () => {
                       }
                     }}
                   />
-                  {slug && (
-                    <Box mt={2}>
-                      <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                        Or use the short link:
-                      </Typography>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={shortUrl}
-                        InputProps={{
-                          readOnly: true,
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <Tooltip title={copiedField === 'short' ? 'Copied!' : 'Copy short link'}>
-                                <IconButton
-                                  onClick={() => copyToClipboard(shortUrl, 'short')}
-                                  edge="end"
-                                  size="small"
-                                  color={copiedField === 'short' ? 'success' : 'default'}
-                                >
-                                  <CopyIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </InputAdornment>
-                          ),
-                          sx: {
-                            fontFamily: 'monospace',
-                            backgroundColor: 'background.paper',
-                          }
-                        }}
-                      />
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </Box>
-            <Divider sx={{ my: 3 }} />
-          </>
-        )}
+                </Box>
+              )}
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                🗳️ This is where voters go to cast their ballots.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        {/* HIGHLIGHTED RESULTS LINK SECTION */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+            <PollIcon sx={{ mr: 1, color: 'primary.main' }} />
+            Results Link
+          </Typography>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            View live results and detailed analytics for your poll. Share this link with anyone you want to see the results.
+          </Alert>
+          <Card variant="outlined" sx={{ backgroundColor: 'rgba(25, 118, 210, 0.08)', borderColor: 'primary.main' }}>
+            <CardContent>
+              <TextField
+                fullWidth
+                value={resultsUrl}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title={copiedField === 'results' ? 'Copied!' : 'Copy results link'}>
+                        <IconButton
+                          onClick={() => copyToClipboard(resultsUrl, 'results')}
+                          edge="end"
+                          color={copiedField === 'results' ? 'success' : 'default'}
+                        >
+                          <CopyIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    fontFamily: 'monospace',
+                    backgroundColor: 'background.paper',
+                  }
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                📊 View ranked-choice voting results and winner analysis.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
 
         {myPollsUrl && (
           <>

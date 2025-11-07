@@ -9,13 +9,16 @@ import {
   Button,
   Alert,
   Divider,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  Link
 } from '@mui/material';
 import { 
   CheckCircle as CheckCircleIcon,
   Download as DownloadIcon,
   Visibility as ViewIcon,
-  Home as HomeIcon
+  Home as HomeIcon,
+  ContentCopy as ContentCopyIcon
 } from '@mui/icons-material';
 
 // Hooks and utilities
@@ -47,6 +50,7 @@ const VoteSuccess = () => {
   // Local state
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Redirect if no ballot data
   useEffect(() => {
@@ -96,6 +100,15 @@ const VoteSuccess = () => {
   // Handle go home
   const handleGoHome = () => {
     navigate('/');
+  };
+
+  // Handle copy link
+  const handleCopyLink = () => {
+    const resultsLink = `${window.location.origin}/results/${pollId}`;
+    navigator.clipboard.writeText(resultsLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    });
   };
 
   // Loading state
@@ -196,7 +209,7 @@ const VoteSuccess = () => {
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400, mx: 'auto' }}>
             
-            {/* Download PDF Button */}
+            {/* Download PDF Button - Gray background (contained) */}
             <Button
               variant="contained"
               size="large"
@@ -204,6 +217,13 @@ const VoteSuccess = () => {
               onClick={handleDownloadPdf}
               disabled={downloadingPdf || !ballotId}
               fullWidth
+              sx={{
+                backgroundColor: 'grey.300',
+                color: 'grey.900',
+                '&:hover': {
+                  backgroundColor: 'grey.400'
+                }
+              }}
             >
               {downloadingPdf ? 'Generating PDF...' : 'Download Ballot PDF'}
             </Button>
@@ -227,6 +247,26 @@ const VoteSuccess = () => {
                 View Results
               </Button>
             )}
+            
+            {/* Update Vote Button - Only show if updates are allowed */}
+            {poll.settings?.allow_vote_updates !== false && (
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => navigate(`/vote/${pollId}`)}
+                fullWidth
+                sx={{
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  '&:hover': {
+                    borderColor: 'primary.dark',
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)'
+                  }
+                }}
+              >
+                Update My Vote
+              </Button>
+            )}
 
             {/* Go Home Button */}
             <Button
@@ -248,21 +288,61 @@ const VoteSuccess = () => {
             
             {/* Results Link for Recording */}
             {canViewResults && (
-              <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+              <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1, position: 'relative' }}>
                 <Typography variant="subtitle2" gutterBottom>
                   Results Link (for your records):
                 </Typography>
-                <Typography 
-                  variant="body2" 
+                
+                {/* Copy Button in upper right */}
+                <IconButton
+                  onClick={handleCopyLink}
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    '&:hover': {
+                      backgroundColor: 'grey.200'
+                    }
+                  }}
+                  size="small"
+                >
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+                
+                {/* Copied feedback */}
+                {copied && (
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      position: 'absolute',
+                      top: 8,
+                      right: 45,
+                      color: 'success.main',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Copied!
+                  </Typography>
+                )}
+                
+                {/* Clickable Link */}
+                <Link
+                  href={`${window.location.origin}/results/${pollId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{ 
                     fontFamily: 'monospace', 
                     fontSize: '0.875rem',
                     wordBreak: 'break-all',
-                    color: 'primary.main'
+                    display: 'block',
+                    textDecoration: 'underline',
+                    '&:hover': {
+                      textDecoration: 'underline'
+                    }
                   }}
                 >
                   {window.location.origin}/results/{pollId}
-                </Typography>
+                </Link>
               </Box>
             )}
           </Box>

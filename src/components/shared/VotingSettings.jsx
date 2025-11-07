@@ -73,6 +73,13 @@ const VotingSettings = ({
             disabled={disabled}  // Only disabled in non-edit mode, CAN CHANGE with votes
           />
         )}
+
+        <SettingSwitch
+          checked={settings.allow_vote_updates !== false}
+          onChange={(e) => handleSettingChange('allow_vote_updates', e.target.checked)}
+          label="Allow voters to update their vote after submitting"
+          disabled={disabled}  // Only disabled in non-edit mode
+        />
       </Box>
     </Box>
   );

@@ -45,6 +45,7 @@ import {
 
 // Components
 import API from '../services/api';
+import { getFingerprint } from '../utils/fingerprint';
 import PollDetails from '../components/PollDetails'; // Now uses MarkdownRenderer internally
 import VoteInputTable from '../components/vote/VoteInputTable';
 import VotingMatchups from '../components/vote/VotingMatchups';
@@ -70,10 +71,11 @@ const Vote = () => {
   const [localError, setLocalError] = useState('');
   const [hideUnranked, setHideUnranked] = useState(false);
   
-  // State for existing ballot (for private polls with tokens)
+  // State for existing ballot
   const [existingBallot, setExistingBallot] = useState(null);
-  const [hasVoted, setHasVoted] = useState(false);
   const [loadingBallot, setLoadingBallot] = useState(false);
+  const [voterFingerprint, setVoterFingerprint] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Check if poll is closed
   const isPollClosed = useMemo(() => {
@@ -82,22 +84,36 @@ const Vote = () => {
       (poll.closing_at && new Date(poll.closing_at) < new Date());
   }, [poll]);
   
-  // Check for existing ballot if token is provided
+  // Generate fingerprint and check for existing ballot
   useEffect(() => {
     const checkExistingBallot = async () => {
-      if (!voterToken || !pollId) return;
+      if (!pollId) return;
       
       setLoadingBallot(true);
       try {
-        const response = await API.get('/ballots/check', {
-          params: {
-            poll_id: pollId,
-            voter_token: voterToken
-          }
-        });
+        // For public polls, generate fingerprint
+        let fingerprint = null;
+        if (!voterToken) {
+          fingerprint = await getFingerprint();
+          setVoterFingerprint(fingerprint);
+          console.log('Generated fingerprint for public poll:', fingerprint.substring(0, 8) + '...');
+        }
+        
+        // Check for existing ballot using NEW endpoint
+        const params = {};
+        if (voterToken) {
+          params.voter_token = voterToken;
+        } else if (fingerprint) {
+          params.voter_fingerprint = fingerprint;
+        } else {
+          return; // Can't check without either
+        }
+        
+        const response = await API.get(`/ballots/${pollId}/ballot`, { params });
         
         if (response.data.has_voted && response.data.ballot) {
-          setHasVoted(true);
+          console.log('Found existing ballot, pre-populating form');
+          setIsUpdating(true); // Voter is updating their existing vote
           setExistingBallot(response.data.ballot);
           
           // Load the existing ballot into tableSelections
@@ -113,7 +129,12 @@ const Vote = () => {
           }
         }
       } catch (err) {
-        console.error('Error checking for existing ballot:', err);
+        if (err.response?.status === 404) {
+          // No existing ballot - this is fine for first-time voters
+          console.log('No existing ballot found - first time voting');
+        } else {
+          console.error('Error checking for existing ballot:', err);
+        }
         // Don't show error - just proceed as normal voting
       } finally {
         setLoadingBallot(false);
@@ -207,8 +228,8 @@ const Vote = () => {
     return getEffectiveBallot(tableSelections, ballotValidation);
   }, [tableSelections, ballotValidation]);
   
-  // Determine if we can submit and show matchups (DISABLED if poll is closed or already voted)
-  const canSubmitBallot = !isPollClosed && !hasVoted && ballotValidation.canSubmit && Object.keys(tableSelections).length > 0;
+  // Determine if we can submit ballot - allow updates for both public and private polls
+  const canSubmitBallot = !isPollClosed && ballotValidation.canSubmit && Object.keys(tableSelections).length > 0;
   const shouldShowMatchupsForBallot = canShowMatchups(tableSelections, displayCandidates, poll?.settings?.ballot_processing_rule || BALLOT_PROCESSING_RULES.ALASKA);
   
   // Handle ballot submission
@@ -216,11 +237,6 @@ const Vote = () => {
     // Additional checks
     if (isPollClosed) {
       setLocalError('This poll is closed and no longer accepting votes.');
-      return;
-    }
-    
-    if (hasVoted) {
-      setLocalError('You have already voted in this poll.');
       return;
     }
     
@@ -247,6 +263,9 @@ const Vote = () => {
       // Add voter token if this is a private poll
       if (voterToken) {
         ballotData.voter_token = voterToken;
+      } else if (voterFingerprint) {
+        // Add fingerprint for public polls
+        ballotData.voter_fingerprint = voterFingerprint;
       }
       
       // Add write-ins to the ballot data if any exist
@@ -265,7 +284,7 @@ const Vote = () => {
       }
       
       setSuccess(true);
-      setHasVoted(true); // Mark as voted after successful submission
+      setIsUpdating(true); // Mark that future submissions will be updates
       
       // Navigate to success page with ballot data
       setTimeout(() => {
@@ -282,8 +301,9 @@ const Vote = () => {
       if (err.response?.data?.message === 'Poll is closed') {
         setLocalError('This poll is closed and no longer accepting votes.');
       } else if (err.response?.data?.detail === 'This token has already been used to vote') {
+        // Note: This error should not occur with updated backend, but keeping for safety
         setLocalError('This voting link has already been used. Each voter can only vote once.');
-        setHasVoted(true);
+        setIsUpdating(true);
       } else if (err.response?.data?.detail === 'Invalid voting token') {
         setLocalError('Invalid voting link. Please check that you are using the correct link from your invitation email.');
       } else {
@@ -467,25 +487,6 @@ const Vote = () => {
             </Alert>
           )}
           
-          {/* Already Voted Warning for Private Polls */}
-          {hasVoted && voterToken && !isPollClosed && (
-            <Alert 
-              severity="info" 
-              sx={{ mb: 3 }}
-              icon={<CheckCircleIcon />}
-            >
-              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                You have already voted in this poll
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                Your vote has been recorded. Below is your submitted ballot for reference.
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Note: In private polls, each voter can only vote once. Your ballot cannot be changed after submission.
-              </Typography>
-            </Alert>
-          )}
-          
           {/* Poll Details - Now with markdown support */}
           {shouldShowPollDetails(poll) && (
             <PollDetails 
@@ -573,18 +574,41 @@ const Vote = () => {
               
               <Collapse in={success}>
                 <Alert severity="success" sx={{ mb: 3 }}>
-                  Ballot submitted successfully! Redirecting to results...
+                  Vote submitted successfully!
                 </Alert>
               </Collapse>
               
-              {/* Write-in Section - disabled if already voted */}
-              {poll.settings?.allow_write_in && !hasVoted && (
+              {/* Update message for returning voters - Only show on initial load */}
+              {isUpdating && !isPollClosed && !submitting && !success && (
+                <Alert 
+                  severity={poll.settings?.allow_vote_updates !== false ? "info" : "warning"}
+                  icon={<InfoIcon />}
+                  sx={{ mb: 3 }}
+                >
+                  <Typography variant="body2">
+                    <strong>You've already voted in this poll.</strong>
+                    {poll.settings?.allow_vote_updates !== false ? (
+                      <>
+                        {' '}You can update your vote below.
+                        {existingBallot?.updated_at && (
+                          <> Last updated: {new Date(existingBallot.updated_at).toLocaleString()}</>
+                        )}
+                      </>
+                    ) : (
+                      <> Vote updates are not allowed for this poll. Your original vote has been recorded.</>
+                    )}
+                  </Typography>
+                </Alert>
+              )}
+              
+              {/* Write-in Section */}
+              {poll.settings?.allow_write_in && (
                 <WriteInSection
                   candidates={poll.candidates || []}
                   existingWriteIns={userWriteIns}
                   onAddWriteIn={handleAddWriteIn}
                   onError={setLocalError}
-                  disabled={submitting || success || hasVoted}
+                  disabled={submitting || success}
                 />
               )}
               
@@ -646,7 +670,7 @@ const Vote = () => {
                       numRanks={numRanks}
                       maxAllowedRanks={maxAllowedRanks}
                       hideUnranked={hideUnranked}
-                      disabled={hasVoted} // Disable if already voted
+                      disabled={isUpdating && poll.settings?.allow_vote_updates === false}
                     />
                     
                     {/* 2. Submit Button directly under input table */}
@@ -655,11 +679,11 @@ const Vote = () => {
                         variant="contained"
                         size="large"
                         onClick={handleSubmit}
-                        disabled={!canSubmitBallot || submitting || success || hasVoted}
-                        startIcon={hasVoted ? <CheckCircleIcon /> : <SendIcon />}
+                        disabled={!canSubmitBallot || submitting || success || (isUpdating && poll.settings?.allow_vote_updates === false)}
+                        startIcon={submitting ? <CircularProgress size={20} /> : <SendIcon />}
                         fullWidth
                       >
-                        {hasVoted ? 'Already Voted' : submitting ? 'Submitting...' : 'Submit Ballot'}
+                        {submitting ? 'Submitting...' : (isUpdating ? 'Update Vote' : 'Submit Vote')}
                       </Button>
                     </Box>
                     
@@ -688,7 +712,7 @@ const Vote = () => {
                     numRanks={numRanks}
                     maxAllowedRanks={maxAllowedRanks}
                     hideUnranked={hideUnranked}
-                    disabled={hasVoted} // Disable if already voted
+                    disabled={isUpdating && poll.settings?.allow_vote_updates === false}
                   />
                   
                   {/* 2. Submit Button directly under input table */}
@@ -697,12 +721,12 @@ const Vote = () => {
                       variant="contained"
                       size="large"
                       onClick={handleSubmit}
-                      disabled={!canSubmitBallot || submitting || success || hasVoted}
-                      startIcon={hasVoted ? <CheckCircleIcon /> : <SendIcon />}
+                      disabled={!canSubmitBallot || submitting || success || (isUpdating && poll.settings?.allow_vote_updates === false)}
+                      startIcon={submitting ? <CircularProgress size={20} /> : <SendIcon />}
                       fullWidth
                       sx={{ maxWidth: '100%' }}
                     >
-                      {hasVoted ? 'Already Voted' : submitting ? 'Submitting...' : 'Submit Ballot'}
+                      {submitting ? 'Submitting...' : (isUpdating ? 'Update Vote' : 'Submit Vote')}
                     </Button>
                   </Box>
                   
