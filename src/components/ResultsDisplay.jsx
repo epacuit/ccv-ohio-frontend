@@ -20,7 +20,7 @@ import {
   BarChart as BarChartIcon,
   People as PeopleIcon,
 } from '@mui/icons-material';
-import HeadToHeadTable from './HeadToHeadTable';
+import HeadToHeadTable from  './HeadToHeadTable'; // './HeadToHeadTableVersion2';
 import PairwiseBallotViewer from './PairwiseBallotViewer';
 import ShareDialog from './ShareDialog';
 
@@ -359,7 +359,7 @@ const ResultsDisplay = ({
               {winnerType === 'condorcet' && matchupDetails.length === 1 && (
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                    {matchupDetails[0].candidate} is the only candidate that wins all of their head-to-head matchups.
+                    {matchupDetails[0].candidate} defeats all other candidates in head-to-head comparisons. 
                   </Typography>
                   <Box sx={{ 
                     bgcolor: 'grey.50', 
@@ -369,7 +369,7 @@ const ResultsDisplay = ({
                     borderColor: 'grey.200'
                   }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main', mb: 1, display: 'block' }}>
-                      {matchupDetails[0].candidate.toUpperCase()}'S WINS
+                      {matchupDetails[0].candidate}'s Head-to-Head Matchups
                     </Typography>
                     {matchupDetails[0].victories.map((v, idx) => (
                       <Typography key={idx} variant="body2" color="text.secondary" sx={{ mb: 0.75, pl: 1 }}>
@@ -782,23 +782,31 @@ const ResultsDisplay = ({
                     
                     {/* Voting Patterns - Single Column Layout */}
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                      VOTING PATTERNS
+                      Voting Patterns
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {results.statistics.ranked_almost_all !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {results.statistics.ranked_almost_all !== undefined && results.statistics.ranked_almost_all > 0 && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: { xs: 'flex-start', md: 'center' },
+                          justifyContent: { xs: 'flex-start', md: 'space-between' },
+                          flexDirection: { xs: 'column', md: 'row' },
+                          gap: { xs: 1, md: 0 }
+                        }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                             <Box sx={{ 
-                              width: 48, 
+                              width: 80,
+                              minWidth: 80,
+                              flexShrink: 0,
                               height: 40, 
                               borderRadius: 1,
-                              bgcolor: alpha(theme.palette.success.main, 0.15),
+                              bgcolor: 'grey.100',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               mr: 2
                             }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                 {results.statistics.ranked_almost_all}%
                               </Typography>
                             </Box>
@@ -806,26 +814,34 @@ const ResultsDisplay = ({
                               Ranked (almost) all candidates
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
                             All except possibly 1 candidate
                           </Typography>
                         </Box>
                       )}
                       
-                      {results.statistics.partial_ranking !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {results.statistics.partial_ranking !== undefined && results.statistics.partial_ranking > 0 && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: { xs: 'flex-start', md: 'center' },
+                          justifyContent: { xs: 'flex-start', md: 'space-between' },
+                          flexDirection: { xs: 'column', md: 'row' },
+                          gap: { xs: 1, md: 0 }
+                        }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                             <Box sx={{ 
-                              width: 48, 
+                              width: 80,
+                              minWidth: 80,
+                              flexShrink: 0,
                               height: 40, 
                               borderRadius: 1,
-                              bgcolor: alpha(theme.palette.info.main, 0.1),
+                              bgcolor: 'grey.100',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               mr: 2
                             }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'info.main' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                 {results.statistics.partial_ranking}%
                               </Typography>
                             </Box>
@@ -833,26 +849,34 @@ const ResultsDisplay = ({
                               Submitted a partial ranking
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            Left at least 2 candidates unranked
+                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
+                            Ranked 2+ candidates but not all
                           </Typography>
                         </Box>
                       )}
                       
-                      {results.statistics.had_gaps !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {results.statistics.had_gaps !== undefined && results.statistics.had_gaps > 0 && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: { xs: 'flex-start', md: 'center' },
+                          justifyContent: { xs: 'flex-start', md: 'space-between' },
+                          flexDirection: { xs: 'column', md: 'row' },
+                          gap: { xs: 1, md: 0 }
+                        }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                             <Box sx={{ 
-                              width: 48, 
+                              width: 80,
+                              minWidth: 80,
+                              flexShrink: 0,
                               height: 40, 
                               borderRadius: 1,
-                              bgcolor: alpha(theme.palette.warning.main, 0.1),
+                              bgcolor: 'grey.100',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               mr: 2
                             }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                 {results.statistics.had_gaps}%
                               </Typography>
                             </Box>
@@ -860,17 +884,25 @@ const ResultsDisplay = ({
                               Ballots had gaps
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            Skipped ranks in sequence
+                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
+                            Skipped rank numbers (e.g., 1, 3, 5)
                           </Typography>
                         </Box>
                       )}
                       
-                      {results.statistics.single_choice_only !== undefined && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {results.statistics.single_choice_only !== undefined && results.statistics.single_choice_only > 0 && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: { xs: 'flex-start', md: 'center' },
+                          justifyContent: { xs: 'flex-start', md: 'space-between' },
+                          flexDirection: { xs: 'column', md: 'row' },
+                          gap: { xs: 1, md: 0 }
+                        }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                             <Box sx={{ 
-                              width: 48, 
+                              width: 80,
+                              minWidth: 80,
+                              flexShrink: 0,
                               height: 40, 
                               borderRadius: 1,
                               bgcolor: 'grey.100',
@@ -887,28 +919,28 @@ const ResultsDisplay = ({
                               Bullet vote
                             </Typography>
                           </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
                             Ranked only first choice
                           </Typography>
                         </Box>
                       )}
                     </Box>
                     
-                    {/* Note about overlapping characteristics */}
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary" 
-                      sx={{ 
-                        display: 'block', 
-                        mt: 2, 
-                        fontStyle: 'italic',
-                        textAlign: 'center'
-                      }}
-                    >
-                      Note: Categories can overlap
-                      <br />
-                      (e.g., a ballot can be both partial and have gaps)
-                    </Typography>
+                    {/* Note about overlapping characteristics - only show if gaps exist */}
+                    {results.statistics.had_gaps !== undefined && results.statistics.had_gaps > 0 && (
+                      <Typography 
+                        variant="caption" 
+                        color="text.secondary" 
+                        sx={{ 
+                          display: 'block', 
+                          mt: 2, 
+                          fontStyle: 'italic',
+                          textAlign: 'center'
+                        }}
+                      >
+                        Note: Gaps can occur with any number of ranked candidates
+                      </Typography>
+                    )}
                     
                     {/* View Ballots button */}
                     {(pollId || CustomBallotViewer) && (

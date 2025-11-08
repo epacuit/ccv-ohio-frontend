@@ -148,32 +148,30 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
   const renderMatchupBar = (matchup) => {
     const totalVotes = results.statistics?.total_votes || 100;
     
-    // Calculate percentages for visualization - ONLY based on voters with an opinion
-    let winnerPercentage, loserPercentage, winnerVotes, loserVotes;
+    // Calculate percentages for visualization
+    let winnerPercentage, loserPercentage, tiePercentage;
     
     if (matchup.isTie) {
       // Equal split for ties
-      winnerPercentage = 50;
-      loserPercentage = 50;
-      winnerVotes = matchup.winner === matchup.candidateA ? matchup.details.aOverB : matchup.details.bOverA;
-      loserVotes = matchup.winner === matchup.candidateA ? matchup.details.bOverA : matchup.details.aOverB;
+      winnerPercentage = 45;
+      loserPercentage = 45;
+      tiePercentage = 10;
     } else {
-      // Calculate based on voters who have an opinion (exclude ties and undefined)
-      // Only count voters who ranked one candidate above the other
-      const totalWithOpinion = matchup.details.aOverB + matchup.details.bOverA;
-      if (totalWithOpinion > 0) {
+      // Calculate based on actual votes if available
+      const totalInMatchup = matchup.details.aOverB + matchup.details.bOverA + matchup.details.ties;
+      if (totalInMatchup > 0) {
         // Correctly map winner/loser to the vote counts
-        winnerVotes = matchup.winner === matchup.candidateA ? matchup.details.aOverB : matchup.details.bOverA;
-        loserVotes = matchup.winner === matchup.candidateA ? matchup.details.bOverA : matchup.details.aOverB;
-        winnerPercentage = (winnerVotes / totalWithOpinion) * 100;
-        loserPercentage = (loserVotes / totalWithOpinion) * 100;
+        const winnerVotes = matchup.winner === matchup.candidateA ? matchup.details.aOverB : matchup.details.bOverA;
+        const loserVotes = matchup.winner === matchup.candidateA ? matchup.details.bOverA : matchup.details.aOverB;
+        winnerPercentage = (winnerVotes / totalInMatchup) * 100;
+        loserPercentage = (loserVotes / totalInMatchup) * 100;
+        tiePercentage = (matchup.details.ties / totalInMatchup) * 100;
       } else {
         // Fallback visualization
         const dominance = Math.min(matchup.margin / totalVotes * 100 + 50, 85);
         winnerPercentage = dominance;
         loserPercentage = 100 - dominance;
-        winnerVotes = 0;
-        loserVotes = 0;
+        tiePercentage = 0;
       }
     }
     
@@ -197,6 +195,16 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
         <Typography variant="caption" display="block" sx={{ color: 'rgba(255,255,255,0.9)' }}>
           {matchup.details.bOverA.toLocaleString()} ballots rank {matchup.candidateB} above {matchup.candidateA}
         </Typography>
+        {matchup.details.ties > 0 && (
+          <Typography variant="caption" display="block" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+            {matchup.details.ties.toLocaleString()} ballots rank them as tied
+          </Typography>
+        )}
+        {matchup.details.undefined > 0 && (
+          <Typography variant="caption" display="block" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+            {matchup.details.undefined.toLocaleString()} ballots have an undefined ranking
+          </Typography>
+        )}
         {!matchup.isTie && (
           <Typography 
             variant="caption" 
@@ -241,13 +249,14 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
             </Typography>
           </Box>
           
-          {/* Bar visualization with count labels */}
+          {/* Bar visualization */}
           <Box 
             sx={{ 
+              display: 'flex', 
+              height: 24, 
               borderRadius: 1, 
               overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
+              bgcolor: 'grey.100',
               cursor: 'pointer',
               transition: 'transform 0.2s',
               '&:hover': {
@@ -255,91 +264,61 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
               }
             }}
           >
-            {/* Count Labels Above Bar - same height as main bar */}
-            <Box 
-              sx={{ 
-                display: 'flex',
-                height: '32px',
-              }}
-            >
-              {/* Winner count (light green area above bar) */}
+            {/* Winner portion (green) */}
+            {winnerPercentage > 0 && (
               <Box 
                 sx={{ 
                   width: `${winnerPercentage}%`,
+                  bgcolor: matchup.isTie ? 'grey.500' : 'success.main',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.success.main, 0.15),
+                  color: 'white',
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'success.dark',
+                  minWidth: winnerPercentage > 15 ? 'auto' : 0,
                 }}
               >
-                {winnerVotes > 0 && winnerVotes.toLocaleString()}
+                {winnerPercentage >= 15 && `${Math.round(winnerPercentage)}%`}
               </Box>
-              
-              {/* Loser count (light red area above bar) */}
+            )}
+            
+            {/* Tie portion (gray) - if there are ties */}
+            {tiePercentage > 2 && (
+              <Box 
+                sx={{ 
+                  width: `${tiePercentage}%`,
+                  bgcolor: 'grey.400',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                }}
+              >
+                {tiePercentage >= 10 && 'tie'}
+              </Box>
+            )}
+            
+            {/* Loser portion (red) */}
+            {loserPercentage > 0 && (
               <Box 
                 sx={{ 
                   width: `${loserPercentage}%`,
+                  bgcolor: matchup.isTie ? 'grey.500' : 'error.main',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.error.main, 0.15),
+                  color: 'white',
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'error.dark',
+                  minWidth: loserPercentage > 15 ? 'auto' : 0,
                 }}
               >
-                {loserVotes > 0 && loserVotes.toLocaleString()}
+                {loserPercentage >= 15 && `${Math.round(loserPercentage)}%`}
               </Box>
-            </Box>
-
-            {/* Main Bar - same height (32px) */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                height: 32,
-              }}
-            >
-              {/* Winner portion (green) */}
-              {winnerPercentage > 0 && (
-                <Box 
-                  sx={{ 
-                    width: `${winnerPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'success.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: winnerPercentage > 15 ? 'auto' : 0,
-                  }}
-                >
-                  {winnerPercentage >= 15 && `${Math.round(winnerPercentage)}%`}
-                </Box>
-              )}
-              
-              {/* Loser portion (red) - NO GRAY TIE SECTION */}
-              {loserPercentage > 0 && (
-                <Box 
-                  sx={{ 
-                    width: `${loserPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'error.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: loserPercentage > 15 ? 'auto' : 0,
-                  }}
-                >
-                  {loserPercentage >= 15 && `${Math.round(loserPercentage)}%`}
-                </Box>
-              )}
-            </Box>
+            )}
           </Box>
         </Box>
       </Tooltip>

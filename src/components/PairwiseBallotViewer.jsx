@@ -228,24 +228,24 @@ const BallotCarousel = ({
     <Paper
       elevation={0}
       sx={{
-        p: 2,
+        p: { xs: 1.5, sm: 2 },
         border: `1px solid ${getBorderColor()}`,
         backgroundColor: getBackgroundColor(),
-        minHeight: 450,
-        height: 450,
+        minHeight: { xs: 400, sm: 450 },
+        height: { xs: 'auto', sm: 450 },
         display: 'flex',
         flexDirection: 'column',
       }}
     >
       {/* Header */}
       <Box sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '0.95rem', sm: '1rem' } }}>
           {getGroupTitle()}
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
           {getGroupDescription()}
         </Typography>
-        <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+        <Box display="flex" alignItems="center" gap={1} mt={0.5} flexWrap="wrap">
           <Chip
             label={`${stats.toLocaleString()} total votes`}
             color={getChipColor()}
@@ -262,7 +262,7 @@ const BallotCarousel = ({
       {/* Carousel with Navigation */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {/* Navigation */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1} flexWrap="wrap" gap={1}>
           <Box display="flex" alignItems="center" gap={1}>
             <IconButton 
               onClick={handlePrevious} 
@@ -271,7 +271,7 @@ const BallotCarousel = ({
             >
               <ArrowBackIcon />
             </IconButton>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
               Ballot {currentIndex + 1} of {totalCount}
             </Typography>
             <IconButton 
@@ -544,18 +544,19 @@ const PairwiseBallotViewer = ({ pollId, isOpen, onClose }) => {
       onClose={onClose}
       maxWidth="xl"
       fullWidth
+      fullScreen={window.innerWidth < 600}
       PaperProps={{
-        sx: { height: '90vh' }
+        sx: { height: { xs: '100vh', sm: '90vh' } }
       }}
     >
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
-          <VisibilityIcon color="primary" />
-          <Typography variant="h6">Pairwise Ballot Viewer</Typography>
+          <VisibilityIcon color="primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+          <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Pairwise Ballot Viewer</Typography>
         </Box>
       </DialogTitle>
       
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ p: { xs: 1.5, sm: 3 } }}>
         {loading ? (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
             <CircularProgress />
@@ -580,9 +581,9 @@ const PairwiseBallotViewer = ({ pollId, isOpen, onClose }) => {
                     
                     return (
                       <MenuItem key={value} value={value}>
-                        <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Typography>
+                        <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" width="100%" gap={{ xs: 0.5, sm: 0 }}>
+                          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                            <Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
                               {comp.cand1.name} vs {comp.cand2.name}
                             </Typography>
                             {(comp.cand1.is_write_in || comp.cand2.is_write_in) && (
@@ -603,37 +604,37 @@ const PairwiseBallotViewer = ({ pollId, isOpen, onClose }) => {
             {/* Ballot Groups */}
             {ballotData && (
               <Box>
-                <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                <Typography variant="h6" gutterBottom sx={{ mb: 2, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                   {ballotData.comparison.cand1.name} vs {ballotData.comparison.cand2.name}
                 </Typography>
                 
                 {/* Summary Stats at the top */}
-                <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: 'grey.50' }}>
+                <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, backgroundColor: 'grey.50' }}>
                   <Grid container spacing={3}>
-                    <Grid item xs={3}>
+                    <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="text.secondary">
                         Total Votes
                       </Typography>
-                      <Typography variant="h5">
+                      <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                         {ballotData.total_votes.toLocaleString()}
                       </Typography>
                     </Grid>
-                    <Grid item xs={3}>
+                    <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="text.secondary">
                         Valid Comparisons
                       </Typography>
-                      <Typography variant="h5">
+                      <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                         {(ballotData.votes_with_comparison || (ballotData.total_votes - (ballotData.stats.undefined || 0))).toLocaleString()}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         out of {ballotData.total_votes.toLocaleString()} votes
                       </Typography>
                     </Grid>
-                    <Grid item xs={3}>
+                    <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="text.secondary">
                         Winner
                       </Typography>
-                      <Typography variant="h5" color="primary">
+                      <Typography variant="h5" color="primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                         {ballotData.stats.cand1_wins > ballotData.stats.cand2_wins
                           ? ballotData.comparison.cand1.name
                           : ballotData.stats.cand2_wins > ballotData.stats.cand1_wins
@@ -641,11 +642,11 @@ const PairwiseBallotViewer = ({ pollId, isOpen, onClose }) => {
                           : 'Tie'}
                       </Typography>
                     </Grid>
-                    <Grid item xs={3}>
+                    <Grid item xs={6} sm={3}>
                       <Typography variant="body2" color="text.secondary">
                         Margin of Victory
                       </Typography>
-                      <Typography variant="h5">
+                      <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                         {Math.abs(ballotData.stats.cand1_wins - ballotData.stats.cand2_wins).toLocaleString()}
                       </Typography>
                     </Grid>
@@ -735,13 +736,19 @@ const PairwiseBallotViewer = ({ pollId, isOpen, onClose }) => {
                       flexWrap: 'wrap',
                       gap: 2,
                       '& > *': {
-                        // Each child gets specific width based on total count
-                        flex: groupsToDisplay.length === 1 ? '1 1 100%' :
+                        // Mobile: Single column
+                        flex: { 
+                          xs: '1 1 100%',
+                          sm: groupsToDisplay.length === 1 ? '1 1 100%' :
                               groupsToDisplay.length === 2 ? '1 1 calc(50% - 8px)' :
                               groupsToDisplay.length === 3 ? '1 1 calc(33.333% - 11px)' :
-                              groupsToDisplay.length === 4 ? '0 0 calc(50% - 8px)' :  // Fixed width for 4 boxes
-                              '1 1 calc(33.333% - 11px)',
-                        maxWidth: groupsToDisplay.length === 4 ? 'calc(50% - 8px)' : 'none',  // Enforce max width for 4 boxes
+                              groupsToDisplay.length === 4 ? '0 0 calc(50% - 8px)' :
+                              '1 1 calc(33.333% - 11px)'
+                        },
+                        maxWidth: { 
+                          xs: '100%',
+                          sm: groupsToDisplay.length === 4 ? 'calc(50% - 8px)' : 'none'
+                        },
                       }
                     }}>
                       {groupsToDisplay.map((group) => (

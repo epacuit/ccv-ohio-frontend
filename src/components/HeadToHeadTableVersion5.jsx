@@ -214,131 +214,157 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
       </Box>
     );
     
+    // Determine which candidate to show first (winner always on top)
+    const topCandidate = matchup.winner;
+    const bottomCandidate = matchup.loser;
+    const topIsA = topCandidate === matchup.candidateA;
+    const topVotes = topIsA ? matchup.details.aOverB : matchup.details.bOverA;
+    const bottomVotes = topIsA ? matchup.details.bOverA : matchup.details.aOverB;
+    const topPercentage = winnerPercentage;
+    const bottomPercentage = loserPercentage;
+    
+    // Calculate circles representation (10 circles = 100%, so each circle = 10%)
+    const topCirclesCount = topPercentage / 10; // e.g., 52% = 5.2 circles
+    const bottomCirclesCount = bottomPercentage / 10; // e.g., 48% = 4.8 circles
+    
+    const topFullCircles = Math.floor(topCirclesCount);
+    const topPartialFill = topCirclesCount - topFullCircles; // 0-1 representing percentage of last circle
+    
+    const bottomFullCircles = Math.floor(bottomCirclesCount);
+    const bottomPartialFill = bottomCirclesCount - bottomFullCircles;
+    
+    // Create unique IDs for this matchup
+    const topClipId = `clip-${topCandidate}-${bottomCandidate}-top`;
+    const bottomClipId = `clip-${topCandidate}-${bottomCandidate}-bottom`;
+    
+    // Render circles
+    const renderCircles = (fullCount, partialFill, color, clipId) => {
+      const circles = [];
+      const radius = 10;
+      const size = radius * 2;
+      
+      // Full circles
+      for (let i = 0; i < fullCount; i++) {
+        circles.push(
+          <svg key={`full-${i}`} width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ marginRight: '3px' }}>
+            <circle cx={radius} cy={radius} r={radius - 1} fill={color} />
+          </svg>
+        );
+      }
+      
+      // Partial circle (if any) - using arc/pie slice
+      if (partialFill > 0) {
+        // Calculate the angle for the arc (0 = top, goes clockwise)
+        const angle = partialFill * 360;
+        const radians = (angle - 90) * Math.PI / 180;
+        const x = radius + (radius - 1) * Math.cos(radians);
+        const y = radius + (radius - 1) * Math.sin(radians);
+        const largeArcFlag = angle > 180 ? 1 : 0;
+        
+        circles.push(
+          <svg key="partial" width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ marginRight: '3px' }}>
+            {/* Background: empty circle outline */}
+            <circle cx={radius} cy={radius} r={radius - 1} fill="none" stroke="#e0e0e0" strokeWidth="1.5" />
+            
+            {/* Foreground: pie slice showing partial fill */}
+            {partialFill > 0 && (
+              <path
+                d={`M ${radius} ${radius} L ${radius} 1 A ${radius - 1} ${radius - 1} 0 ${largeArcFlag} 1 ${x} ${y} Z`}
+                fill={color}
+              />
+            )}
+          </svg>
+        );
+      }
+      
+      return circles;
+    };
+    
     return (
       <Tooltip title={tooltipContent} arrow placement="top">
-        <Box sx={{ mb: 2, px: 2 }}>
-          {/* Candidate names above the bar */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0.5 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: matchup.isTie ? 500 : 600,
-                color: matchup.isTie ? 'text.secondary' : 'success.main',
-                fontSize: '0.875rem'
-              }}
-            >
-              {matchup.winner}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: matchup.isTie ? 500 : 400,
-                color: matchup.isTie ? 'text.secondary' : 'error.main',
-                fontSize: '0.875rem'
-              }}
-            >
-              {matchup.loser}
-            </Typography>
-          </Box>
-          
-          {/* Bar visualization with count labels */}
-          <Box 
-            sx={{ 
-              borderRadius: 1, 
-              overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'scale(1.02)',
-              }
-            }}
-          >
-            {/* Count Labels Above Bar - same height as main bar */}
-            <Box 
-              sx={{ 
-                display: 'flex',
-                height: '32px',
-              }}
-            >
-              {/* Winner count (light green area above bar) */}
-              <Box 
+        <Box sx={{ 
+          mb: 2, 
+          px: 2,
+          cursor: 'pointer',
+          transition: 'transform 0.2s',
+          '&:hover': {
+            transform: 'scale(1.01)',
+          }
+        }}>
+          {/* Two rows: winner on top, loser below */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {/* Top candidate (winner) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              {/* Candidate name */}
+              <Typography 
+                variant="body2" 
                 sx={{ 
-                  width: `${winnerPercentage}%`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.success.main, 0.15),
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'success.dark',
+                  minWidth: '100px',
+                  fontWeight: !matchup.isTie ? 600 : 400,
+                  color: !matchup.isTie ? 'success.main' : 'text.primary',
+                  fontSize: '0.9rem',
                 }}
               >
-                {winnerVotes > 0 && winnerVotes.toLocaleString()}
-              </Box>
+                {topCandidate}
+              </Typography>
               
-              {/* Loser count (light red area above bar) */}
-              <Box 
-                sx={{ 
-                  width: `${loserPercentage}%`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.error.main, 0.15),
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'error.dark',
-                }}
-              >
-                {loserVotes > 0 && loserVotes.toLocaleString()}
+              {/* Circles and percentage/count together */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Circles */}
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {renderCircles(topFullCircles, topPartialFill, !matchup.isTie ? "#2e7d32" : "#757575", topClipId)}
+                </Box>
+                
+                {/* Percentage and count */}
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 500,
+                    color: 'text.secondary',
+                    fontSize: '0.875rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {Math.round(topPercentage)}% ({topVotes.toLocaleString()})
+                </Typography>
               </Box>
             </Box>
 
-            {/* Main Bar - same height (32px) */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                height: 32,
-              }}
-            >
-              {/* Winner portion (green) */}
-              {winnerPercentage > 0 && (
-                <Box 
-                  sx={{ 
-                    width: `${winnerPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'success.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: winnerPercentage > 15 ? 'auto' : 0,
-                  }}
-                >
-                  {winnerPercentage >= 15 && `${Math.round(winnerPercentage)}%`}
-                </Box>
-              )}
+            {/* Bottom candidate (loser) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              {/* Candidate name */}
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  minWidth: '100px',
+                  fontWeight: 400,
+                  color: 'text.primary',
+                  fontSize: '0.9rem',
+                }}
+              >
+                {bottomCandidate}
+              </Typography>
               
-              {/* Loser portion (red) - NO GRAY TIE SECTION */}
-              {loserPercentage > 0 && (
-                <Box 
+              {/* Circles and percentage/count together */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Circles */}
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {renderCircles(bottomFullCircles, bottomPartialFill, !matchup.isTie ? "#d32f2f" : "#757575", bottomClipId)}
+                </Box>
+                
+                {/* Percentage and count */}
+                <Typography 
+                  variant="body2" 
                   sx={{ 
-                    width: `${loserPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'error.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
+                    fontWeight: 500,
+                    color: 'text.secondary',
                     fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: loserPercentage > 15 ? 'auto' : 0,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  {loserPercentage >= 15 && `${Math.round(loserPercentage)}%`}
-                </Box>
-              )}
+                  {Math.round(bottomPercentage)}% ({bottomVotes.toLocaleString()})
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </Box>

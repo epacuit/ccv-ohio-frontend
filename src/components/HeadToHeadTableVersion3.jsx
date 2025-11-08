@@ -214,131 +214,147 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
       </Box>
     );
     
+    // Determine which candidate to show first (winner always on top)
+    const firstCandidate = matchup.winner;
+    const secondCandidate = matchup.loser;
+    const firstIsA = firstCandidate === matchup.candidateA;
+    const firstVotes = firstIsA ? matchup.details.aOverB : matchup.details.bOverA;
+    const secondVotes = firstIsA ? matchup.details.bOverA : matchup.details.aOverB;
+    const firstPercentage = winnerPercentage;
+    const secondPercentage = loserPercentage;
+    
     return (
       <Tooltip title={tooltipContent} arrow placement="top">
-        <Box sx={{ mb: 2, px: 2 }}>
-          {/* Candidate names above the bar */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0.5 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: matchup.isTie ? 500 : 600,
-                color: matchup.isTie ? 'text.secondary' : 'success.main',
-                fontSize: '0.875rem'
-              }}
-            >
-              {matchup.winner}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: matchup.isTie ? 500 : 400,
-                color: matchup.isTie ? 'text.secondary' : 'error.main',
-                fontSize: '0.875rem'
-              }}
-            >
-              {matchup.loser}
-            </Typography>
-          </Box>
-          
-          {/* Bar visualization with count labels */}
-          <Box 
-            sx={{ 
-              borderRadius: 1, 
-              overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'scale(1.02)',
-              }
-            }}
-          >
-            {/* Count Labels Above Bar - same height as main bar */}
-            <Box 
-              sx={{ 
-                display: 'flex',
-                height: '32px',
-              }}
-            >
-              {/* Winner count (light green area above bar) */}
-              <Box 
+        <Box sx={{ mb: 2.5, px: 2 }}>
+          {/* Two-bar layout: winner always on top */}
+          <Box sx={{ 
+            cursor: 'pointer',
+            transition: 'transform 0.2s',
+            '&:hover': {
+              transform: 'scale(1.01)',
+            }
+          }}>
+            {/* First candidate bar (winner) */}
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              mb: 0.5,
+            }}>
+              {/* Candidate name */}
+              <Typography 
+                variant="body2" 
                 sx={{ 
-                  width: `${winnerPercentage}%`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.success.main, 0.15),
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'success.dark',
+                  minWidth: '100px',
+                  fontWeight: !matchup.isTie ? 600 : 400,
+                  color: !matchup.isTie ? 'success.main' : 'text.primary',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {winnerVotes > 0 && winnerVotes.toLocaleString()}
-              </Box>
+                {firstCandidate}
+              </Typography>
               
-              {/* Loser count (light red area above bar) */}
-              <Box 
-                sx={{ 
-                  width: `${loserPercentage}%`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.error.main, 0.15),
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'error.dark',
-                }}
-              >
-                {loserVotes > 0 && loserVotes.toLocaleString()}
+              {/* Bar area - responsive width with 400px max, positioning for alignment */}
+              <Box sx={{ width: '100%', maxWidth: '400px', display: 'flex', alignItems: 'center', position: 'relative' }}>
+                {/* Just the colored bar - no percentage inside */}
+                {firstPercentage > 0 ? (
+                  <Box 
+                    sx={{ 
+                      width: `${firstPercentage}%`,
+                      maxWidth: 'calc(100% - 120px)',
+                      height: '28px',
+                      bgcolor: !matchup.isTie ? 'success.main' : 'grey.500',
+                      borderRadius: 0.5,
+                    }}
+                  />
+                ) : (
+                  <Box 
+                    sx={{ 
+                      width: '2px',
+                      height: '28px',
+                      bgcolor: 'grey.600',
+                    }}
+                  />
+                )}
+                
+                {/* Percentage and count right after the bar */}
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    position: 'absolute',
+                    left: `min(calc(${firstPercentage}% + 8px), calc(100% - 110px))`,
+                    fontWeight: 500,
+                    color: 'text.secondary',
+                    fontSize: '0.875rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {Math.round(firstPercentage)}% ({firstVotes.toLocaleString()})
+                </Typography>
               </Box>
             </Box>
 
-            {/* Main Bar - same height (32px) */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                height: 32,
-              }}
-            >
-              {/* Winner portion (green) */}
-              {winnerPercentage > 0 && (
-                <Box 
-                  sx={{ 
-                    width: `${winnerPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'success.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: winnerPercentage > 15 ? 'auto' : 0,
-                  }}
-                >
-                  {winnerPercentage >= 15 && `${Math.round(winnerPercentage)}%`}
-                </Box>
-              )}
+            {/* Second candidate bar (loser) */}
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}>
+              {/* Candidate name */}
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  minWidth: '100px',
+                  fontWeight: 400,
+                  color: 'text.primary',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {secondCandidate}
+              </Typography>
               
-              {/* Loser portion (red) - NO GRAY TIE SECTION */}
-              {loserPercentage > 0 && (
-                <Box 
+              {/* Bar area - responsive width with 400px max, positioning for alignment */}
+              <Box sx={{ width: '100%', maxWidth: '400px', display: 'flex', alignItems: 'center', position: 'relative' }}>
+                {/* Just the colored bar - no percentage inside */}
+                {secondPercentage > 0 ? (
+                  <Box 
+                    sx={{ 
+                      width: `${secondPercentage}%`,
+                      maxWidth: 'calc(100% - 120px)',
+                      height: '28px',
+                      bgcolor: !matchup.isTie ? 'error.main' : 'grey.500',
+                      borderRadius: 0.5,
+                    }}
+                  />
+                ) : (
+                  <Box 
+                    sx={{ 
+                      width: '2px',
+                      height: '28px',
+                      bgcolor: 'grey.600',
+                    }}
+                  />
+                )}
+                
+                {/* Percentage and count aligned to winner's bar end */}
+                <Typography 
+                  variant="body2" 
                   sx={{ 
-                    width: `${loserPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'error.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
+                    position: 'absolute',
+                    left: `min(calc(${firstPercentage}% + 8px), calc(100% - 110px))`,
+                    fontWeight: 500,
+                    color: 'text.secondary',
                     fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: loserPercentage > 15 ? 'auto' : 0,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  {loserPercentage >= 15 && `${Math.round(loserPercentage)}%`}
-                </Box>
-              )}
+                  {Math.round(secondPercentage)}% ({secondVotes.toLocaleString()})
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </Box>

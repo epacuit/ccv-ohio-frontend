@@ -214,131 +214,122 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
       </Box>
     );
     
+    // Determine which candidate to show first (winner always on left)
+    const leftCandidate = matchup.winner;
+    const rightCandidate = matchup.loser;
+    const leftIsA = leftCandidate === matchup.candidateA;
+    const leftVotes = leftIsA ? matchup.details.aOverB : matchup.details.bOverA;
+    const rightVotes = leftIsA ? matchup.details.bOverA : matchup.details.aOverB;
+    const leftPercentage = winnerPercentage;
+    const rightPercentage = loserPercentage;
+    
+    // Rectangle dimensions - wider for better visibility
+    const rectWidth = 200;
+    const rectHeight = 40;
+    const divideX = (leftPercentage / 100) * rectWidth;
+    const centerX = rectWidth / 2;
+    
     return (
       <Tooltip title={tooltipContent} arrow placement="top">
-        <Box sx={{ mb: 2, px: 2 }}>
-          {/* Candidate names above the bar */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 0.5 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: matchup.isTie ? 500 : 600,
-                color: matchup.isTie ? 'text.secondary' : 'success.main',
-                fontSize: '0.875rem'
-              }}
-            >
-              {matchup.winner}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: matchup.isTie ? 500 : 400,
-                color: matchup.isTie ? 'text.secondary' : 'error.main',
-                fontSize: '0.875rem'
-              }}
-            >
-              {matchup.loser}
-            </Typography>
-          </Box>
-          
-          {/* Bar visualization with count labels */}
-          <Box 
-            sx={{ 
-              borderRadius: 1, 
-              overflow: 'hidden',
-              border: '1px solid',
-              borderColor: 'divider',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'scale(1.02)',
-              }
-            }}
-          >
-            {/* Count Labels Above Bar - same height as main bar */}
-            <Box 
-              sx={{ 
-                display: 'flex',
-                height: '32px',
-              }}
-            >
-              {/* Winner count (light green area above bar) */}
-              <Box 
+        <Box sx={{ 
+          mb: 2, 
+          px: 2,
+          cursor: 'pointer',
+          transition: 'transform 0.2s',
+          '&:hover': {
+            transform: 'scale(1.01)',
+          }
+        }}>
+          {/* Horizontal layout: Name | Rectangle | Name with percentages */}
+          <Box sx={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: 3,
+          }}>
+            {/* Left candidate (winner) */}
+            <Box sx={{ flex: 1, textAlign: 'right' }}>
+              <Typography 
+                variant="body2" 
                 sx={{ 
-                  width: `${winnerPercentage}%`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.success.main, 0.15),
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'success.dark',
+                  fontWeight: !matchup.isTie ? 600 : 400,
+                  color: !matchup.isTie ? 'success.main' : 'text.primary',
+                  fontSize: '0.9rem',
                 }}
               >
-                {winnerVotes > 0 && winnerVotes.toLocaleString()}
-              </Box>
-              
-              {/* Loser count (light red area above bar) */}
-              <Box 
+                {leftCandidate}
+              </Typography>
+              <Typography 
+                variant="caption" 
                 sx={{ 
-                  width: `${loserPercentage}%`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: matchup.isTie ? 'grey.100' : (theme) => alpha(theme.palette.error.main, 0.15),
+                  color: 'text.secondary',
                   fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: matchup.isTie ? 'text.secondary' : 'error.dark',
                 }}
               >
-                {loserVotes > 0 && loserVotes.toLocaleString()}
-              </Box>
+                {Math.round(leftPercentage)}% ({leftVotes.toLocaleString()})
+              </Typography>
             </Box>
-
-            {/* Main Bar - same height (32px) */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                height: 32,
-              }}
-            >
-              {/* Winner portion (green) */}
-              {winnerPercentage > 0 && (
-                <Box 
-                  sx={{ 
-                    width: `${winnerPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'success.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: winnerPercentage > 15 ? 'auto' : 0,
-                  }}
-                >
-                  {winnerPercentage >= 15 && `${Math.round(winnerPercentage)}%`}
-                </Box>
-              )}
-              
-              {/* Loser portion (red) - NO GRAY TIE SECTION */}
-              {loserPercentage > 0 && (
-                <Box 
-                  sx={{ 
-                    width: `${loserPercentage}%`,
-                    bgcolor: matchup.isTie ? 'grey.500' : 'error.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    minWidth: loserPercentage > 15 ? 'auto' : 0,
-                  }}
-                >
-                  {loserPercentage >= 15 && `${Math.round(loserPercentage)}%`}
-                </Box>
-              )}
+            
+            {/* Split Rectangle - vertical split with green on left, red on right */}
+            <Box sx={{ position: 'relative', width: `${rectWidth}px`, height: `${rectHeight}px`, flexShrink: 0 }}>
+              <svg width={rectWidth} height={rectHeight} viewBox={`0 0 ${rectWidth} ${rectHeight}`}>
+                {/* Left side (winner - green) - rounded on left only */}
+                <path
+                  d={`M 4 0 L ${divideX} 0 L ${divideX} ${rectHeight} L 4 ${rectHeight} A 4 4 0 0 1 0 ${rectHeight - 4} L 0 4 A 4 4 0 0 1 4 0`}
+                  fill={!matchup.isTie ? "#2e7d32" : "#757575"}
+                />
+                
+                {/* Right side (loser - red) - rounded on right only */}
+                <path
+                  d={`M ${divideX} 0 L ${rectWidth - 4} 0 A 4 4 0 0 1 ${rectWidth} 4 L ${rectWidth} ${rectHeight - 4} A 4 4 0 0 1 ${rectWidth - 4} ${rectHeight} L ${divideX} ${rectHeight} L ${divideX} 0`}
+                  fill={!matchup.isTie ? "#d32f2f" : "#757575"}
+                />
+                
+                {/* 50-50 line (light gray) at center */}
+                <line
+                  x1={centerX}
+                  y1="0"
+                  x2={centerX}
+                  y2={rectHeight}
+                  stroke="#d0d0d0"
+                  strokeWidth="1"
+                  opacity="0.6"
+                />
+                
+                {/* Border rectangle */}
+                <rect
+                  x="0"
+                  y="0"
+                  width={rectWidth}
+                  height={rectHeight}
+                  fill="none"
+                  stroke="#e0e0e0"
+                  strokeWidth="1"
+                  rx="4"
+                />
+              </svg>
+            </Box>
+            
+            {/* Right candidate (loser) */}
+            <Box sx={{ flex: 1, textAlign: 'left' }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontWeight: 400,
+                  color: 'text.primary',
+                  fontSize: '0.9rem',
+                }}
+              >
+                {rightCandidate}
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                }}
+              >
+                {Math.round(rightPercentage)}% ({rightVotes.toLocaleString()})
+              </Typography>
             </Box>
           </Box>
         </Box>

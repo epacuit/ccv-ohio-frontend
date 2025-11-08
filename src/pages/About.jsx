@@ -7,7 +7,13 @@ import {
   useTheme,
   alpha,
   Button,
+  Alert,
 } from '@mui/material';
+import {
+  Error as ErrorIcon,
+  Info as InfoIcon,
+  Warning as WarningIcon,
+} from '@mui/icons-material';
 import API from '../services/api';
 import ResultsDisplay from '../components/ResultsDisplay';
 import DemoPairwiseBallotViewer from '../components/DemoPairwiseBallotViewer';
@@ -76,10 +82,8 @@ const DEMO_EXAMPLES = [
 
 // Short text under each step header
 const STEP_TEXT = {
-  'condorcet-winner': 'The winner is the candidate who defeats every other candidate in head-to-head matchups.',
-  'most-wins': 'If no candidate beats all the others in head-to-head matchups, choose the candidate with the most head-to-head wins.',
-  'smallest-loss': 'If multiple candidates are tied for the most wins, choose the one with the smallest margin of loss.',
-  'all-tied': 'If all tiebreakers are exhausted, the election results in a tie among the remaining candidates.',
+  'step1': 'The winner is the candidate with the most head-to-head victories. Most often, this is a candidate who beats every other candidate head-to-head.',
+  'step2': 'In the unlikely event that multiple candidates are tied for the most head-to-head victories, choose the one with the smallest loss.',
 };
 
 const AboutPage = () => {
@@ -125,6 +129,93 @@ const AboutPage = () => {
     [demoSelections, demoCandidates, demoSettings]
   );
 
+  // Render validation messages for the demo
+  const renderValidationMessage = () => {
+    if (!demoValidation || Object.keys(demoSelections).length === 0) return null;
+    
+    // Case 1: Invalid ballot (cannot process)
+    if (demoValidation.processingLevel === 'invalid') {
+      return (
+        <Alert 
+          severity="error" 
+          icon={<ErrorIcon />}
+          sx={{ mt: 3 }}
+        >
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Ballot Cannot Be Processed
+          </Typography>
+          {demoValidation.errors.map((error, index) => (
+            <Typography key={index} variant="body2">
+              {error}
+            </Typography>
+          ))}
+        </Alert>
+      );
+    }
+    
+    // Case 2: Incomplete ballot (complete ranking required)
+    if (demoValidation.processingLevel === 'incomplete') {
+      return (
+        <Alert 
+          severity="info" 
+          icon={<InfoIcon />}
+          sx={{ mt: 3 }}
+        >
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Complete Your Ballot
+          </Typography>
+          {demoValidation.errors.map((error, index) => (
+            <Typography key={index} variant="body2">
+              {error}
+            </Typography>
+          ))}
+        </Alert>
+      );
+    }
+    
+    // Case 3: Truncated ballot
+    if (demoValidation.processingLevel === 'truncated') {
+      return (
+        <Alert 
+          severity="warning" 
+          icon={<WarningIcon />}
+          sx={{ mt: 3 }}
+        >
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Ballot Will Be Truncated
+          </Typography>
+          {demoValidation.warnings.map((warning, index) => (
+            <Typography key={index} variant="body2">
+              {warning}
+            </Typography>
+          ))}
+        </Alert>
+      );
+    }
+    
+    // Case 4: Warning (with processing notes)
+    if (demoValidation.processingLevel === 'warning') {
+      return (
+        <Alert 
+          severity="info" 
+          icon={<InfoIcon />}
+          sx={{ mt: 3 }}
+        >
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Ballot Processing Notes
+          </Typography>
+          {demoValidation.warnings.map((warning, index) => (
+            <Typography key={index} variant="body2" sx={{ mb: index < demoValidation.warnings.length - 1 ? 1 : 0 }}>
+              {warning}
+            </Typography>
+          ))}
+        </Alert>
+      );
+    }
+    
+    return null;
+  };
+
   // Calculate results for a specific example (API uses cand_* ids)
   const calculateCaseResults = async (example) => {
     if (caseResults[example.id]) return; // Already calculated
@@ -169,19 +260,16 @@ const AboutPage = () => {
     settings: { allow_ties: true, num_ranks: example.candidates.length },
   });
 
-  // Step block (no default background; hover-only tint)
-  const StepBlock = ({ id, hue, text, example }) => (
+  // Step block (clean, minimal design)
+  const StepBlock = ({ id, hue, description, example }) => (
     <Box>
       <Box
         sx={{
-          display: 'flex',
-          gap: 2,
           cursor: 'pointer',
-          p: 2,
-          borderRadius: 2,
-          transition: 'background-color 0.2s, box-shadow 0.2s',
-          bgcolor: 'transparent',
-          '&:hover': { bgcolor: alpha(hue, 0.07) },
+          py: 0.5,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
         }}
         onClick={() => {
           setExpandedCases((prev) =>
@@ -189,44 +277,25 @@ const AboutPage = () => {
           );
         }}
       >
-        <Box
-          sx={{
-            minWidth: 40,
-            height: 40,
-            borderRadius: '50%',
-            bgcolor: alpha(hue, 0.12),
-            color: hue,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '1.1rem',
-          }}
+        <Typography
+          variant="body2"
+          sx={{ color: hue, fontWeight: 600 }}
         >
-          {['condorcet-winner', 'most-wins', 'smallest-loss', 'all-tied'].indexOf(id) + 1}
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography
-            variant="body1"
-            sx={{ color: textColor, lineHeight: 1.75, fontSize: '1.05rem' }}
-          >
-            {text}
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mt: 1, color: hue, fontWeight: 600, letterSpacing: 0.15 }}
-          >
-            Click to see example {expandedCases.includes(id) ? '▼' : '▶'}
-          </Typography>
-        </Box>
+          {expandedCases.includes(id) ? '▼' : '▶'}
+        </Typography>
+        <Typography
+          variant="body1"
+          sx={{ color: textColor, lineHeight: 1.75 }}
+        >
+          {description}
+        </Typography>
       </Box>
 
-      {/* Collapsible results panel only (no extra text clutter above the results UI) */}
+      {/* Collapsible results panel */}
       {expandedCases.includes(id) && (
         <Box
           sx={{
-            mt: 2,
-            ml: { xs: 0, sm: 7 },
+            mt: 1,
             p: 3,
             border: '1px solid',
             borderColor: 'divider',
@@ -241,8 +310,6 @@ const AboutPage = () => {
               pollId={null}
               showExportButtons={false}
               showShareButton={false}
-              // IMPORTANT: the ballot viewer expects candidates with id === name,
-              // so pass a separate candidates list to the viewer.
               CustomBallotViewer={DemoPairwiseBallotViewer}
               customBallotViewerProps={{
                 candidates: example.candidates.map((name) => ({ id: name, name })),
@@ -281,19 +348,18 @@ const AboutPage = () => {
             variant="h6"
             sx={{ maxWidth: 800, mx: 'auto', lineHeight: 1.65, color: textColor }}
           >
-            Consensus Choice makes a fair, head-to-head comparison between every pair of
-            candidates so that broad support—not just faction size—decides the winner.
+            Consensus Choice makes a fair, head-to-head comparison between every pair of candidates so that broad support—not just faction size—decides the winner.
           </Typography>
         </Box>
 
         {/* Selection Process */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4, maxWidth: 800, mx: 'auto' }}>
           <Typography
             variant="h5"
             gutterBottom
             sx={{ fontWeight: 700, mb: 2, color: textColor }}
           >
-            The Selection Process
+            Choosing the Winner
           </Typography>
 
           {/* Zeroth step explanation */}
@@ -301,69 +367,170 @@ const AboutPage = () => {
             variant="body1"
             sx={{ mb: 3, lineHeight: 1.75, color: textColor, fontSize: '1.05rem' }}
           >
-            Voters rank the candidates. Unless the poll designer requires it, voters do not
-            need to rank every candidate. Once all ballots have been cast, candidates are
-            compared in head-to-head matchups, much like a round-robin sports tournament.
+            Voters rank candidates in order of preference. Every pair of candidates is then compared head-to-head to see who voters prefer in each matchup.
           </Typography>
 
-          {/* Steps with hover-only tint */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Steps - no examples here */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Step 1 */}
+            <Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                }}
+              >
+                <Box
+                  sx={{
+                    minWidth: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    bgcolor: alpha(theme.palette.success.main, 0.12),
+                    color: theme.palette.success.main,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1.1rem',
+                  }}
+                >
+                  1
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography
+                    variant="body1"
+                    sx={{ color: textColor, lineHeight: 1.75, fontSize: '1.05rem' }}
+                  >
+                    {STEP_TEXT['step1']}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Step 2 */}
+            <Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                }}
+              >
+                <Box
+                  sx={{
+                    minWidth: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    bgcolor: alpha(theme.palette.info.main, 0.12),
+                    color: theme.palette.info.main,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1.1rem',
+                  }}
+                >
+                  2
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography
+                    variant="body1"
+                    sx={{ color: textColor, lineHeight: 1.75, fontSize: '1.05rem' }}
+                  >
+                    {STEP_TEXT['step2']}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Examples Section */}
+        <Box sx={{ mb: 6, maxWidth: 800, mx: 'auto' }}>
+          <Typography
+            variant="h5"
+            gutterBottom
+            sx={{ fontWeight: 700, mb: 3, color: textColor }}
+          >
+            Examples
+          </Typography>
+
+          {/* What Usually Happens */}
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, mb: 1.5, color: textColor, fontSize: '1.1rem' }}
+            >
+              What Usually Happens
+            </Typography>
             <StepBlock
               id="condorcet-winner"
               hue={theme.palette.success.main}
-              text={STEP_TEXT['condorcet-winner']}
+              description="There is a candidate that beats every other candidate head-to-head."
               example={DEMO_EXAMPLES.find((e) => e.id === 'condorcet-winner')}
             />
-            <StepBlock
-              id="most-wins"
-              hue={theme.palette.info.main}
-              text={STEP_TEXT['most-wins']}
-              example={DEMO_EXAMPLES.find((e) => e.id === 'most-wins')}
-            />
-            <StepBlock
-              id="smallest-loss"
-              hue={theme.palette.warning.main}
-              text={STEP_TEXT['smallest-loss']}
-              example={DEMO_EXAMPLES.find((e) => e.id === 'smallest-loss')}
-            />
-            <StepBlock
-              id="all-tied"
-              hue={theme.palette.grey[700]}
-              text={STEP_TEXT['all-tied']}
-              example={DEMO_EXAMPLES.find((e) => e.id === 'all-tied')}
-            />
+          </Box>
+
+          {/* Rare Situations */}
+          <Box>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, mb: 1.5, color: textColor, fontSize: '1.1rem' }}
+            >
+              Rare Situations
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <StepBlock
+                id="most-wins"
+                hue={theme.palette.info.main}
+                description="There is one candidate with the most victories (but the candidate does not beat every other candidate)."
+                example={DEMO_EXAMPLES.find((e) => e.id === 'most-wins')}
+              />
+              <StepBlock
+                id="smallest-loss"
+                hue={theme.palette.warning.main}
+                description="There are multiple candidates with the most victories, so we choose the one with the smallest loss."
+                example={DEMO_EXAMPLES.find((e) => e.id === 'smallest-loss')}
+              />
+            </Box>
           </Box>
         </Box>
 
         {/* Ballot Processing Rules */}
-        <Box sx={{ mb: 6 }}>
+        <Box sx={{ mb: 6, maxWidth: 800, mx: 'auto' }}>
           <Typography
             variant="h5"
             gutterBottom
             sx={{ fontWeight: 700, mb: 2, color: textColor }}
           >
-            Ballot Processing Rules
+            Determining Head-to-Head Comparisons
           </Typography>
 
           {/* Plain text (no info box) */}
-          <Typography variant="body1" sx={{ color: textColor, lineHeight: 1.75, mb: 2 }}>
-            A <strong>ballot</strong> is a ranking of the candidates. Unless the poll designer
-            requires it, voters do not need to rank every candidate.
-          </Typography>
-          <Typography variant="body1" sx={{ color: textColor, lineHeight: 1.75, mb: 2 }}>
-            When we compare two candidates head-to-head (for example, Alice vs. Bob), we process
-            a single ballot as follows:
-          </Typography>
-          <Box component="ul" sx={{ pl: 3, color: textColor, lineHeight: 1.75, mb: 3 }}>
-            <li>
-              If the ballot assigns a higher rank to <strong>Alice</strong> than to{' '}
-              <strong>Bob</strong>, it counts as a win for <strong>Alice</strong>.
-            </li>
-            <li>
-              If the ballot assigns a rank to <strong>Alice</strong> but not to{' '}
-              <strong>Bob</strong>, it counts as a win for <strong>Alice</strong> as long as
-              there is no <em>skipped rank above Alice</em>.
-            </li>
+          <Box>
+            <Typography variant="body1" sx={{ color: textColor, lineHeight: 1.75, mb: 2 }}>
+              A <strong>ballot</strong> is a ranking of the candidates. Unless the poll designer
+              requires it, voters do not need to rank every candidate.
+            </Typography>
+            <Typography variant="body1" sx={{ color: textColor, lineHeight: 1.75, mb: 2 }}>
+              When we compare two candidates head-to-head (for example, Alice vs. Bob), we process
+              a single ballot as follows:
+            </Typography>
+            <Box component="ul" sx={{ pl: 3, color: textColor, lineHeight: 1.75, mb: 3 }}>
+              <li>
+                If the ballot assigns a higher rank to <strong>Alice</strong> than to{' '}
+                <strong>Bob</strong>, it counts as a vote for <strong>Alice</strong> in her matchup with <strong>Bob</strong>.
+              </li>
+              <li>
+                If the ballot assigns a rank to <strong>Alice</strong> but not to{' '}
+                <strong>Bob</strong>, it counts as a vote for <strong>Alice</strong> in her matchup with <strong>Bob</strong>, as long as there is no <em>skipped rank above <strong>Alice</strong></em>.
+              </li>
+            </Box>
           </Box>
 
           {/* Interactive demo: same components as Vote page */}
@@ -371,6 +538,7 @@ const AboutPage = () => {
             elevation={0}
             sx={{
               p: 3,
+              mt: 3,
               border: '1px solid',
               borderColor: 'divider',
               bgcolor: alpha(theme.palette.primary.main, 0.02),
@@ -399,12 +567,16 @@ const AboutPage = () => {
                   selections={demoSelections}
                   onSelectionChange={setDemoSelections}
                   settings={demoSettings}
+                  validation={demoValidation}
                   onRemoveWriteIn={() => {}}
                   numRanks={demoCandidates.length}
                   maxAllowedRanks={demoCandidates.length}
                   hideUnranked={false}
                   disabled={false}
                 />
+                
+                {/* Validation Message */}
+                {renderValidationMessage()}
               </Box>
 
               <VotingMatchups
