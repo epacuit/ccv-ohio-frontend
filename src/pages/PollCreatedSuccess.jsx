@@ -273,9 +273,8 @@ const PollCreatedSuccess = () => {
                     <Stack direction="row" spacing={2}>
                       <Button
                         variant="contained"
-                        startIcon={sendingInvites ? <CircularProgress size={16} /> : <SendIcon />}
-                        onClick={handleSendInvitations}
-                        disabled={sendingInvites}
+                        startIcon={<AdminIcon />}
+                        onClick={() => window.open(adminUrl, '_blank')}
                         fullWidth
                         sx={{
                           backgroundColor: '#1976d2',
@@ -284,27 +283,13 @@ const PollCreatedSuccess = () => {
                           }
                         }}
                       >
-                        {sendingInvites ? 'Sending...' : 'Send Email Invitations'}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<AdminIcon />}
-                        onClick={() => window.open(adminUrl, '_blank')}
-                        fullWidth
-                        sx={{ 
-                          borderColor: '#bdbdbd',
-                          color: 'text.primary'
-                        }}
-                      >
-                        Manage in Admin Panel
+                        Manage Voters in Admin Panel
                       </Button>
                     </Stack>
                     
-                    {!sendingInvites && (
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                        Note: Emails will appear in MailHog at http://localhost:8025
-                      </Typography>
-                    )}
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
+                      All invitations have been sent. Use the admin panel to resend invitations, add more voters, or manage your poll.
+                    </Typography>
                   </CardContent>
                 </Card>
               )}
