@@ -99,17 +99,35 @@ const PollCreatedSuccess = () => {
         const response = await API.post(`/polls/${pollId}/voters`, {
           admin_token: adminToken,
           emails: voterEmails,
-          send_invitations: false
+          send_invitations: true  // CRITICAL: Send invitations when adding voters
         });
         
         setVotersAdded(true);
+        
+        const added = response.data.added?.length || 0;
+        const alreadyExisted = response.data.already_existed?.length || 0;
+        const duplicates = response.data.duplicates?.length || 0;
+        
         setVoterStats({
           total: voterEmails.length,
-          added: response.data.added.length,
-          duplicates: response.data.duplicates.length
+          added: added,
+          alreadyExisted: alreadyExisted,
+          duplicates: duplicates
         });
         
-        setSuccess(`Added ${response.data.added.length} voter(s) to your private poll`);
+        // Build success message
+        let message = '';
+        if (alreadyExisted > 0) {
+          message = `Sent invitations to ${alreadyExisted} voter(s)`;
+          if (added > 0) message = `Added ${added} new voter(s) and sent invitations to ${alreadyExisted} existing voter(s)`;
+        } else if (added > 0) {
+          message = `Added ${added} voter(s) and sent invitations`;
+        }
+        if (duplicates > 0) {
+          message += ` (${duplicates} already invited)`;
+        }
+        
+        setSuccess(message || response.data.message);
       } catch (err) {
         console.error('Failed to add voters:', err);
         setError('Failed to add voters. You can add them manually in the admin panel.');
@@ -137,10 +155,12 @@ const PollCreatedSuccess = () => {
         emails: []
       });
       
-      setSuccess(`Sent ${response.data.sent_to.length} invitation(s). Check MailHog at http://localhost:8025`);
+      // Use the actual message from the backend (will show correct provider)
+      const message = response.data.message || `Sent ${response.data.sent_to.length} invitation(s)`;
+      setSuccess(message);
     } catch (err) {
       console.error('Failed to send invitations:', err);
-      setError('Failed to send invitations. Check if MailHog is running.');
+      setError('Failed to send invitations. Please check the admin panel or try again later.');
     } finally {
       setSendingInvites(false);
     }
@@ -215,8 +235,16 @@ const PollCreatedSuccess = () => {
                 <Card variant="outlined" sx={{ backgroundColor: '#fafafa', borderColor: '#e0e0e0', mb: 2 }}>
                   <CardContent>
                     <Typography variant="body1" sx={{ mb: 2 }}>
-                      <strong>{voterStats.added} voter(s)</strong> have been added to your private poll.
-                      {voterStats.duplicates > 0 && ` (${voterStats.duplicates} duplicates skipped)`}
+                      {voterStats.alreadyExisted > 0 && (
+                        <>
+                          <strong>{voterStats.alreadyExisted} invitation(s)</strong> sent to existing voters.
+                          {voterStats.added > 0 && ` ${voterStats.added} new voter(s) added.`}
+                        </>
+                      )}
+                      {voterStats.alreadyExisted === 0 && voterStats.added > 0 && (
+                        <><strong>{voterStats.added} voter(s)</strong> added and invitations sent.</>
+                      )}
+                      {voterStats.duplicates > 0 && ` (${voterStats.duplicates} already invited, skipped)`}
                     </Typography>
                     
                     <Box sx={{ backgroundColor: 'white', p: 2, borderRadius: 1, mb: 2 }}>
