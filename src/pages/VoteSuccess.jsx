@@ -209,46 +209,27 @@ const VoteSuccess = () => {
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400, mx: 'auto' }}>
             
-            {/* Download PDF Button - Gray background (contained) */}
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={downloadingPdf ? <CircularProgress size={20} /> : <DownloadIcon />}
-              onClick={handleDownloadPdf}
-              disabled={downloadingPdf || !ballotId}
-              fullWidth
-              sx={{
-                backgroundColor: 'grey.300',
-                color: 'grey.900',
-                '&:hover': {
-                  backgroundColor: 'grey.400'
-                }
-              }}
-            >
-              {downloadingPdf ? 'Generating PDF...' : 'Download Ballot PDF'}
-            </Button>
-
-            {/* PDF Error */}
-            {pdfError && (
-              <Alert severity="error" sx={{ textAlign: 'left' }}>
-                {pdfError}
-              </Alert>
-            )}
-
-            {/* View Results Button */}
+            {/* View Results Button - First, with gray background */}
             {canViewResults && (
               <Button
-                variant="outlined"
+                variant="contained"
                 size="large"
                 startIcon={<ViewIcon />}
                 onClick={handleViewResults}
                 fullWidth
+                sx={{
+                  backgroundColor: 'grey.300',
+                  color: 'grey.900',
+                  '&:hover': {
+                    backgroundColor: 'grey.400'
+                  }
+                }}
               >
                 View Results
               </Button>
             )}
             
-            {/* Update Vote Button - Only show if updates are allowed */}
+            {/* Update Vote Button - Second, if updates are allowed */}
             {poll.settings?.allow_vote_updates !== false && (
               <Button
                 variant="outlined"
@@ -268,7 +249,26 @@ const VoteSuccess = () => {
               </Button>
             )}
 
-            {/* Go Home Button */}
+            {/* Download PDF Button - Third, outlined style */}
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={downloadingPdf ? <CircularProgress size={20} /> : <DownloadIcon />}
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf || !ballotId}
+              fullWidth
+            >
+              {downloadingPdf ? 'Generating PDF...' : 'Download Ballot PDF'}
+            </Button>
+
+            {/* PDF Error */}
+            {pdfError && (
+              <Alert severity="error" sx={{ textAlign: 'left' }}>
+                {pdfError}
+              </Alert>
+            )}
+
+            {/* Go Home Button - Last */}
             <Button
               variant="text"
               size="large"

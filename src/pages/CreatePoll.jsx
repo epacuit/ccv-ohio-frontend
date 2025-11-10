@@ -572,6 +572,13 @@ const CreatePoll = ({ isEmbedded = false }) => {
             <Divider sx={{ my: 4, opacity: 0.3 }} />
 
             <Collapse in={pollType === 'private'}>
+              <Box sx={{ mb: 3 }}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Don't worry!</strong> You can add more voters later from the admin panel after creating your poll.
+                  </Typography>
+                </Alert>
+              </Box>
               <EmailListInput
                 emails={formData.voter_emails}
                 onChange={updateEmailList}

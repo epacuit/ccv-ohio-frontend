@@ -52,6 +52,9 @@ const PollCreatedSuccess = () => {
   const [addingVoters, setAddingVoters] = useState(false);
   const [votersAdded, setVotersAdded] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
+  const [invitesSent, setInvitesSent] = useState(false);
+  const [personalMessage, setPersonalMessage] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
   const [voterStats, setVoterStats] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -99,32 +102,27 @@ const PollCreatedSuccess = () => {
         const response = await API.post(`/polls/${pollId}/voters`, {
           admin_token: adminToken,
           emails: voterEmails,
-          send_invitations: true  // CRITICAL: Send invitations when adding voters
+          send_invitations: false  // Don't auto-send - let user choose on success page
         });
         
         setVotersAdded(true);
         
         const added = response.data.added?.length || 0;
-        const alreadyExisted = response.data.already_existed?.length || 0;
         const duplicates = response.data.duplicates?.length || 0;
         
         setVoterStats({
           total: voterEmails.length,
           added: added,
-          alreadyExisted: alreadyExisted,
           duplicates: duplicates
         });
         
-        // Build success message
+        // Build success message - voters added, not sent yet
         let message = '';
-        if (alreadyExisted > 0) {
-          message = `Sent invitations to ${alreadyExisted} voter(s)`;
-          if (added > 0) message = `Added ${added} new voter(s) and sent invitations to ${alreadyExisted} existing voter(s)`;
-        } else if (added > 0) {
-          message = `Added ${added} voter(s) and sent invitations`;
+        if (added > 0) {
+          message = `Added ${added} voter(s) to your private poll`;
         }
         if (duplicates > 0) {
-          message += ` (${duplicates} already invited)`;
+          message += message ? `. ${duplicates} already existed` : `${duplicates} voters already existed`;
         }
         
         setSuccess(message || response.data.message);
@@ -152,15 +150,17 @@ const PollCreatedSuccess = () => {
     try {
       const response = await API.post(`/polls/${pollId}/send-invitations`, {
         admin_token: adminToken,
-        emails: []
+        emails: [], // Empty = send to all uninvited
+        personal_message: personalMessage.trim() || undefined
       });
       
       // Use the actual message from the backend (will show correct provider)
       const message = response.data.message || `Sent ${response.data.sent_to.length} invitation(s)`;
       setSuccess(message);
+      setInvitesSent(true);
     } catch (err) {
       console.error('Failed to send invitations:', err);
-      setError('Failed to send invitations. Please check the admin panel or try again later.');
+      setError(err.response?.data?.detail || 'Failed to send invitations. Please try again or use the admin panel.');
     } finally {
       setSendingInvites(false);
     }
@@ -231,23 +231,23 @@ const PollCreatedSuccess = () => {
                 </Box>
               )}
               
-              {votersAdded && voterStats && (
+              {votersAdded && voterStats && !invitesSent && (
                 <Card variant="outlined" sx={{ backgroundColor: '#fafafa', borderColor: '#e0e0e0', mb: 2 }}>
                   <CardContent>
-                    <Typography variant="body1" sx={{ mb: 2 }}>
-                      {voterStats.alreadyExisted > 0 && (
-                        <>
-                          <strong>{voterStats.alreadyExisted} invitation(s)</strong> sent to existing voters.
-                          {voterStats.added > 0 && ` ${voterStats.added} new voter(s) added.`}
-                        </>
-                      )}
-                      {voterStats.alreadyExisted === 0 && voterStats.added > 0 && (
-                        <><strong>{voterStats.added} voter(s)</strong> added and invitations sent.</>
-                      )}
-                      {voterStats.duplicates > 0 && ` (${voterStats.duplicates} already invited, skipped)`}
+                    <Typography variant="body1" sx={{ mb: 2, fontWeight: 600 }}>
+                      ✓ {voterStats.added} voter(s) added to your private poll
                     </Typography>
                     
-                    <Box sx={{ backgroundColor: 'white', p: 2, borderRadius: 1, mb: 2 }}>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        You can add more voters anytime from the admin panel
+                      </Typography>
+                    </Alert>
+                    
+                    <Box sx={{ backgroundColor: 'white', p: 2, borderRadius: 1, mb: 3 }}>
+                      <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                        Voters:
+                      </Typography>
                       <List dense>
                         {voterEmails.slice(0, 5).map((email, idx) => (
                           <ListItem key={idx}>
@@ -268,13 +268,145 @@ const PollCreatedSuccess = () => {
                       </List>
                     </Box>
                     
-                    <Divider sx={{ my: 2 }} />
+                    <Divider sx={{ my: 3 }} />
                     
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                      Ready to Send Invitations?
+                    </Typography>
+                    
+                    {/* Personal Message */}
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Add a Personal Message (optional)
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        placeholder="Add a personal note to your invitation email (e.g., 'Looking forward to your input on our department's decision!')"
+                        value={personalMessage}
+                        onChange={(e) => setPersonalMessage(e.target.value)}
+                        variant="outlined"
+                        sx={{ 
+                          backgroundColor: 'white',
+                          '& .MuiOutlinedInput-root': {
+                            '&:hover fieldset': {
+                              borderColor: 'primary.main',
+                            },
+                          }
+                        }}
+                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        This message will appear at the top of the invitation email
+                      </Typography>
+                    </Box>
+                    
+                    {/* Preview Button */}
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => setShowPreview(!showPreview)}
+                      sx={{ mb: 2 }}
+                    >
+                      {showPreview ? 'Hide Preview' : 'Preview Email'}
+                    </Button>
+                    
+                    {/* Email Preview */}
+                    {showPreview && (
+                      <Box sx={{ 
+                        mb: 3, 
+                        p: 3, 
+                        backgroundColor: 'white', 
+                        border: '2px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1
+                      }}>
+                        <Typography variant="caption" color="text.secondary" gutterBottom display="block" sx={{ mb: 2, fontWeight: 600 }}>
+                          📧 EMAIL PREVIEW (What voters will receive):
+                        </Typography>
+                        
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
+                          <strong>Subject:</strong> You're invited to vote in: {pollTitle || pollData?.title || 'Your Poll'}
+                        </Typography>
+                        
+                        <Divider sx={{ mb: 2 }} />
+                        
+                        {personalMessage.trim() && (
+                          <Box sx={{ 
+                            p: 2, 
+                            mb: 2, 
+                            backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                            borderLeft: '4px solid',
+                            borderColor: 'primary.main',
+                            fontStyle: 'italic'
+                          }}>
+                            <Typography variant="body2">
+                              "{personalMessage.trim()}"
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        <Typography variant="body1" paragraph>
+                          <strong>You've been invited to vote in:</strong> {pollTitle || pollData?.title || 'Your Poll'}
+                        </Typography>
+                        
+                        {pollData?.description && (
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {pollData.description}
+                          </Typography>
+                        )}
+                        
+                        <Box sx={{ textAlign: 'center', my: 3 }}>
+                          <Button 
+                            variant="contained" 
+                            disabled
+                            sx={{ 
+                              backgroundColor: '#1976d2',
+                              color: 'white',
+                              pointerEvents: 'none',
+                              opacity: 0.7,
+                              cursor: 'not-allowed',
+                              '&.Mui-disabled': {
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                opacity: 0.7
+                              }
+                            }}
+                          >
+                            Cast Your Vote
+                          </Button>
+                          <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                            (Preview only - button will be active in actual email)
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ backgroundColor: '#f5f5f5', p: 2, borderRadius: 1, mb: 2 }}>
+                          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                            Can't click the button? Copy this link:
+                          </Typography>
+                          <Typography variant="caption" sx={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                            https://app.betterchoices.vote/vote/{pollId}?token=...
+                          </Typography>
+                        </Box>
+                        
+                        <Divider sx={{ my: 2 }} />
+                        
+                        <Typography variant="caption" color="text.secondary">
+                          This is a private poll. Only invited voters can participate.
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    <Divider sx={{ my: 3 }} />
+                    
+                    {/* Action Buttons */}
                     <Stack direction="row" spacing={2}>
                       <Button
                         variant="contained"
-                        startIcon={<AdminIcon />}
-                        onClick={() => window.open(adminUrl, '_blank')}
+                        size="large"
+                        startIcon={sendingInvites ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+                        onClick={handleSendInvitations}
+                        disabled={sendingInvites}
                         fullWidth
                         sx={{
                           backgroundColor: '#1976d2',
@@ -283,13 +415,54 @@ const PollCreatedSuccess = () => {
                           }
                         }}
                       >
-                        Manage Voters in Admin Panel
+                        {sendingInvites ? 'Sending Invitations...' : 'Send Invitations Now'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="large"
+                        startIcon={<AdminIcon />}
+                        onClick={() => window.open(adminUrl, '_blank')}
+                        fullWidth
+                        sx={{ 
+                          borderColor: '#bdbdbd',
+                          color: 'text.primary'
+                        }}
+                      >
+                        Send Later
                       </Button>
                     </Stack>
                     
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
-                      All invitations have been sent. Use the admin panel to resend invitations, add more voters, or manage your poll.
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
+                      If you choose "Send Later", you can send invitations from the admin panel anytime. 
+                      You can also add more voters there.
                     </Typography>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* After invitations sent */}
+              {invitesSent && (
+                <Card variant="outlined" sx={{ backgroundColor: '#e8f5e9', borderColor: 'success.main', mb: 2 }}>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                      <CheckCircleIcon color="success" />
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Invitations Sent!
+                      </Typography>
+                    </Box>
+                    
+                    <Typography variant="body2" paragraph>
+                      All {voterEmails.length} invitation email(s) have been sent. Voters will receive their unique voting links.
+                    </Typography>
+                    
+                    <Button
+                      variant="outlined"
+                      startIcon={<AdminIcon />}
+                      onClick={() => window.open(adminUrl, '_blank')}
+                      fullWidth
+                    >
+                      Manage Voters in Admin Panel
+                    </Button>
                   </CardContent>
                 </Card>
               )}

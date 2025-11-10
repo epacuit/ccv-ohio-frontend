@@ -135,92 +135,117 @@ const MyPolls = () => {
 
         {polls.length > 0 && (
           <>
-            <Box mb={2}>
+            <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
               <Typography variant="body2" color="text.secondary">
-                Showing {polls.length} poll{polls.length === 1 ? '' : 's'}
+                {polls.length} poll{polls.length === 1 ? '' : 's'}
               </Typography>
             </Box>
 
-            <Grid container spacing={3}>
+            <Stack spacing={2}>
               {polls.map((poll) => (
-                <Grid item xs={12} md={6} lg={4} key={poll.id}>
-                  <Card 
-                    elevation={0}
-                    sx={{ 
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      '&:hover': {
-                        boxShadow: 2,
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                        <Typography variant="h6" component="h2" sx={{ flexGrow: 1, pr: 1 }}>
-                          {poll.title}
-                        </Typography>
-                        <Chip
-                          icon={getStatusIcon(poll.status)}
-                          label={poll.status}
-                          size="small"
-                          color={getStatusColor(poll.status)}
-                          variant="outlined"
-                        />
+                <Card 
+                  key={poll.id}
+                  elevation={0}
+                  sx={{ 
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': {
+                      boxShadow: 2,
+                      borderColor: 'primary.main',
+                    },
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Box display="flex" alignItems="center" gap={3}>
+                      
+                      {/* Column 1: Poll Info - Flexible width */}
+                      <Box flex={1}>
+                        <Box display="flex" alignItems="center" gap={1} mb={1}>
+                          <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
+                            {poll.title}
+                          </Typography>
+                          <Chip
+                            icon={getStatusIcon(poll.status)}
+                            label={poll.status}
+                            size="small"
+                            color={getStatusColor(poll.status)}
+                            sx={{ 
+                              textTransform: 'capitalize',
+                              fontWeight: 500
+                            }}
+                          />
+                        </Box>
+                        
+                        <Stack direction="row" spacing={3} mt={1.5}>
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Poll ID
+                            </Typography>
+                            <Typography variant="body2" fontFamily="monospace" fontWeight="medium">
+                              {poll.short_id}
+                            </Typography>
+                          </Box>
+                          
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Created
+                            </Typography>
+                            <Typography variant="body2">
+                              {new Date(poll.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              })}
+                            </Typography>
+                          </Box>
+                          
+                          {poll.slug && (
+                            <Box>
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                Custom URL
+                              </Typography>
+                              <Typography variant="body2" fontFamily="monospace" color="primary.main">
+                                /{poll.slug}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Stack>
                       </Box>
 
-                      <Divider sx={{ my: 2 }} />
+                      {/* Column 2: Vote Count - Fixed width */}
+                      <Box sx={{ width: 100, textAlign: 'center', flexShrink: 0 }}>
+                        <Typography variant="h4" color="primary.main" fontWeight="bold">
+                          {poll.total_ballots || 0}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {poll.total_ballots === 1 ? 'Vote' : 'Votes'}
+                        </Typography>
+                      </Box>
 
-                      <Stack spacing={1}>
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Poll ID:
-                          </Typography>
-                          <Typography variant="body2" fontFamily="monospace">
-                            {poll.short_id}
-                          </Typography>
-                        </Box>
-
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Total Votes:
-                          </Typography>
-                          <Typography variant="body2" fontWeight="medium">
-                            {poll.total_ballots || 0}
-                          </Typography>
-                        </Box>
-
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Created:
-                          </Typography>
-                          <Typography variant="body2">
-                            {new Date(poll.created_at).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </CardContent>
-
-                    <CardActions sx={{ p: 2, pt: 0 }}>
-                      <Stack direction="column" spacing={1} width="100%">
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          startIcon={<AdminIcon />}
-                          onClick={() => navigate(`/admin/${poll.short_id}?token=${poll.admin_token}`)}
-                          size="small"
-                        >
-                          Admin Panel
-                        </Button>
-                        <Stack direction="row" spacing={1}>
+                      {/* Column 3: Buttons - Fixed width, FLUSH RIGHT */}
+                      <Box sx={{ width: 200, flexShrink: 0 }}>
+                        <Stack direction="column" spacing={1}>
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            startIcon={<AdminIcon />}
+                            onClick={() => navigate(`/admin/${poll.short_id}?token=${poll.admin_token}`)}
+                            sx={{
+                              backgroundColor: 'grey.300',
+                              color: 'grey.900',
+                              '&:hover': {
+                                backgroundColor: 'grey.400'
+                              }
+                            }}
+                          >
+                            Admin Panel
+                          </Button>
                           <Button
                             fullWidth
                             variant="outlined"
                             startIcon={<VoteIcon />}
                             onClick={() => navigate(`/vote/${poll.short_id}`)}
-                            size="small"
                           >
                             Vote
                           </Button>
@@ -229,17 +254,17 @@ const MyPolls = () => {
                             variant="outlined"
                             startIcon={<ResultsIcon />}
                             onClick={() => navigate(`/results/${poll.short_id}`)}
-                            size="small"
                           >
                             Results
                           </Button>
                         </Stack>
-                      </Stack>
-                    </CardActions>
-                  </Card>
-                </Grid>
+                      </Box>
+
+                    </Box>
+                  </CardContent>
+                </Card>
               ))}
-            </Grid>
+            </Stack>
           </>
         )}
       </Container>
