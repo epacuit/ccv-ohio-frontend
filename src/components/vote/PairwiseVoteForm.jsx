@@ -153,7 +153,7 @@ const PairwiseVoteForm = ({
           sx={{ mb: 2, fontWeight: 600, px: { xs: 0.5, sm: 0 } }}
         >
           To vote, darken the circle next to your preferred candidate in each
-          matchup. You may darken both circles if you have no preference.
+          matchup. If you do not darken a circle in a head-to-head matchup, no preference will be recorded for that matchup.
         </Typography>
       )}
 

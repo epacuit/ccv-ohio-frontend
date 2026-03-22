@@ -120,7 +120,7 @@ const AboutPage = () => {
                   Primary Election
                 </Typography>
                 <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.75 }}>
-                  All candidates compete in a primary. The top 3 vote-getters advance to the general election.
+                  All candidates compete in an open nonpartisan primary. The top 3 vote-getters advance to the general election.
                 </Typography>
               </Box>
             </Box>

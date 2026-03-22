@@ -17,6 +17,7 @@ import ScrollToTop from './components/ScrollToTop';
 import MyPolls from './pages/MyPolls';
 import AboutPage from './pages/About';
 import NotFound from './pages/NotFound';
+import Overview from './pages/Overview';
 
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 // Component to detect embedding status from URL
@@ -47,6 +48,7 @@ const AppContent = () => {
           <Route path="/results/:pollId" element={<PollResults />} />
           <Route path="/my-polls/:email" element={<MyPolls />} />
           <Route path="/admin/:pollId" element={<Admin />} />
+          <Route path="/overview" element={<Overview />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
