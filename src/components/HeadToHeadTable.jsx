@@ -159,7 +159,7 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
       loserVotes = matchup.winner === matchup.candidateA ? matchup.details.bOverA : matchup.details.aOverB;
     } else {
       // Calculate based on voters who have an opinion (exclude ties and undefined)
-      // Only count voters who ranked one candidate above the other
+      // Only count voters who expressed a preference
       const totalWithOpinion = matchup.details.aOverB + matchup.details.bOverA;
       if (totalWithOpinion > 0) {
         // Correctly map winner/loser to the vote counts
@@ -192,10 +192,10 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
           <strong>{matchup.candidateA} vs {matchup.candidateB}</strong>
         </Typography>
         <Typography variant="caption" display="block" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-          {matchup.details.aOverB.toLocaleString()} ballots rank {matchup.candidateA} above {matchup.candidateB}
+          {matchup.details.aOverB.toLocaleString()} ballots prefer {matchup.candidateA} over {matchup.candidateB}
         </Typography>
         <Typography variant="caption" display="block" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-          {matchup.details.bOverA.toLocaleString()} ballots rank {matchup.candidateB} above {matchup.candidateA}
+          {matchup.details.bOverA.toLocaleString()} ballots prefer {matchup.candidateB} over {matchup.candidateA}
         </Typography>
         {!matchup.isTie && (
           <Typography 
@@ -208,7 +208,7 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
               fontSize: '0.85rem'
             }}
           >
-            <strong>{matchup.winner} wins by a margin of {matchup.margin.toLocaleString()}</strong>
+            <strong>{matchup.winner} wins by a margin of {Math.round(matchup.margin).toLocaleString()}</strong>
           </Typography>
         )}
       </Box>

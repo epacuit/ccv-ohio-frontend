@@ -1,5 +1,5 @@
 // hooks/usePoll.js
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import API from '../services/api';
 
 export const usePoll = (urlParam) => {
@@ -7,8 +7,6 @@ export const usePoll = (urlParam) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
-  
-  const pollingInterval = useRef(null);
   
   // Use urlParam directly - backend handles slug/short_id/UUID resolution
   const pollId = urlParam;
@@ -56,20 +54,6 @@ export const usePoll = (urlParam) => {
     loadPoll();
   }, [pollId]);
 
-  // Set up polling for write-ins
-  useEffect(() => {
-    if (poll?.settings?.allow_write_in) {
-      pollingInterval.current = setInterval(() => {
-        loadPoll();
-      }, 3000);
-    }
-
-    return () => {
-      if (pollingInterval.current) {
-        clearInterval(pollingInterval.current);
-      }
-    };
-  }, [poll?.settings?.allow_write_in]);
 
   return {
     poll,

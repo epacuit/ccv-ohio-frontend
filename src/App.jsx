@@ -9,16 +9,14 @@ import PollCreatedSuccess from './pages/PollCreatedSuccess';
 import Vote from './pages/Vote'; 
 import VoteSuccess from './pages/VoteSuccess';
 import PollResults from './pages/PollResults';
-import DevTools from './pages/DevTools';
 import Admin from './pages/Admin';
 import HomePage from './pages/Home';
-import NavigationBar from './components/NavigationBar'; 
+import NavigationBar from './components/NavigationBar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
-import CSVImportTool  from './pages/CSVImportTool';
 import MyPolls from './pages/MyPolls';
-import DemoPage from './pages/DemoPage';
 import AboutPage from './pages/About';
+import NotFound from './pages/NotFound';
 
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 // Component to detect embedding status from URL
@@ -41,19 +39,16 @@ const AppContent = () => {
       <Box component="main" sx={{ flexGrow: 1 }}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/csv-import" element={<CSVImportTool />} />
           <Route path="/create" element={<CreatePoll isEmbedded={isEmbedded} />} />
           <Route path="/poll-created" element={<PollCreatedSuccess />} />
           <Route path="/vote/:pollId" element={<Vote />} />
           <Route path="/vote-success/:pollId" element={<VoteSuccess />} />
           <Route path="/about" element={<AboutPage />} />
-          <Route path="/demo" element={<DemoPage />} />
           <Route path="/results/:pollId" element={<PollResults />} />
           <Route path="/my-polls/:email" element={<MyPolls />} />
           <Route path="/admin/:pollId" element={<Admin />} />
-          <Route path="/dev" element={<DevTools />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
-
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Box>
       

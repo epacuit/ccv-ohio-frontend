@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   IconButton,
   Chip,
-  Grid,
-  Card,
-  CardContent,
   CircularProgress,
   Alert,
   Dialog,
@@ -15,776 +11,433 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Select,
-  MenuItem,
+  Stack,
   FormControl,
   InputLabel,
-  LinearProgress,
-  useTheme,
-  alpha,
+  Select,
+  MenuItem,
+  Paper,
+  Radio,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
-  CompareArrows as CompareArrowsIcon,
   Visibility as VisibilityIcon,
-  ExpandMore as ExpandMoreIcon,
+  CompareArrows as CompareArrowsIcon,
 } from '@mui/icons-material';
 import API from '../services/api';
-import ReadOnlyVotingTable from './vote/ReadOnlyVotingTable';
+import { generateMatchups, matchupKey } from './vote/PairwiseVoteForm';
 
-const BallotCarousel = ({ 
-  groupType, 
-  comparison, 
-  stats, 
-  allCandidates, 
-  isWinner,
-  pollId,
-  initialBallots = [],
-  totalCount = 0,
-  pollNumRanks = null
-}) => {
-  const [ballots, setBallots] = useState(initialBallots);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(totalCount > initialBallots.length);
-  const [offset, setOffset] = useState(initialBallots.length);
-  const theme = useTheme();
+/**
+ * A single matchup card for ballot display, with optional highlight.
+ * highlight: 'green' | 'red' | 'warning' | null
+ */
+const MatchupCard = ({ cand1, cand2, sel, highlight }) => {
+  const borderColor = highlight === 'green'
+    ? 'success.main'
+    : highlight === 'red'
+      ? 'error.main'
+      : highlight === 'warning'
+        ? 'warning.light'
+        : 'divider';
 
-  // Load more ballots when needed
-  const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
-    
-    setLoading(true);
-    try {
-      const response = await API.get(
-        `/pairwise-ballots/poll/${pollId}/pairwise`,
-        { 
-          params: { 
-            cand1_id: comparison.cand1.id,
-            cand2_id: comparison.cand2.id,
-            group: groupType,
-            limit: 50,
-            offset: offset
-          }
-        }
-      );
-      
-      const newBallots = response.data.ballots;
-      setBallots(prev => [...prev, ...newBallots]);
-      setOffset(prev => prev + newBallots.length);
-      setHasMore(response.data.has_more);
-    } catch (error) {
-      console.error('Error loading more ballots:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [loading, hasMore, offset, pollId, comparison, groupType]);
-
-  const handlePrevious = () => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : ballots.length - 1));
-  };
-
-  const handleNext = () => {
-    // Load more when near the end
-    if (currentIndex >= ballots.length - 3 && hasMore && !loading) {
-      loadMore();
-    }
-    setCurrentIndex((prev) => (prev < ballots.length - 1 ? prev + 1 : 0));
-  };
-
-  const getBackgroundColor = () => {
-    if (isWinner === true) {
-      return alpha(theme.palette.success.main, 0.08);
-    } else if (isWinner === false) {
-      return alpha(theme.palette.error.main, 0.08);
-    }
-    
-    switch (groupType) {
-      case 'tie':
-        return alpha(theme.palette.warning.main, 0.05);
-      case 'undefined':
-        return alpha(theme.palette.grey[500], 0.05);
-      default:
-        return alpha(theme.palette.grey[500], 0.03);
-    }
-  };
-
-  const getBorderColor = () => {
-    if (isWinner === true) {
-      return theme.palette.success.main;
-    } else if (isWinner === false) {
-      return theme.palette.error.main;
-    }
-    
-    switch (groupType) {
-      case 'tie':
-        return theme.palette.warning.main;
-      case 'undefined':
-        return theme.palette.grey[500];
-      default:
-        return theme.palette.grey[500];
-    }
-  };
-
-  const getChipColor = () => {
-    if (isWinner === true) return 'success';
-    if (isWinner === false) return 'error';
-    return 'primary';
-  };
-
-  const getGroupTitle = () => {
-    switch (groupType) {
-      case 'cand1_wins':
-        return `${comparison.cand1.name} beats ${comparison.cand2.name}`;
-      case 'cand2_wins':
-        return `${comparison.cand2.name} beats ${comparison.cand1.name}`;
-      case 'tie':
-        return 'Tied or Equal Ranking';
-      case 'undefined':
-        return 'Comparison Undefined';
-      default:
-        return '';
-    }
-  };
-
-  const getGroupDescription = () => {
-    switch (groupType) {
-      case 'cand1_wins':
-        return `Ballots where ${comparison.cand1.name} is ranked higher (per Alaska rules)`;
-      case 'cand2_wins':
-        return `Ballots where ${comparison.cand2.name} is ranked higher (per Alaska rules)`;
-      case 'tie':
-        return 'Ballots where both candidates have the same rank or both are unranked (no skipped ranks)';
-      case 'undefined':
-        return 'Ballots with skipped ranks making the comparison undefined';
-      default:
-        return '';
-    }
-  };
-
-  const getHighlightColors = () => {
-    const colors = {};
-    
-    switch (groupType) {
-      case 'cand1_wins':
-        colors[comparison.cand1.id] = 'green';
-        colors[comparison.cand2.id] = 'red';
-        break;
-      case 'cand2_wins':
-        colors[comparison.cand1.id] = 'red';
-        colors[comparison.cand2.id] = 'green';
-        break;
-      case 'tie':
-        colors[comparison.cand1.id] = 'yellow';
-        colors[comparison.cand2.id] = 'yellow';
-        break;
-      case 'undefined':
-        colors[comparison.cand1.id] = null;
-        colors[comparison.cand2.id] = null;
-        break;
-    }
-    
-    return colors;
-  };
-
-  const currentBallot = ballots[currentIndex];
-  const selections = {};
-  
-  // Check if ballot actually has rankings
-  if (!currentBallot || !currentBallot.rankings || currentBallot.rankings.length === 0) {
-    console.error('EMPTY BALLOT DETECTED:', currentBallot);
-  } else {
-    currentBallot.rankings.forEach(ranking => {
-      // CRITICAL: Use exact candidate_id and convert rank to number
-      selections[ranking.candidate_id] = Number(ranking.rank);
-    });
-  }
-
-  // Extensive debugging
-  if (currentBallot && Object.keys(selections).length === 0) {
-    console.error('=== EMPTY SELECTIONS BUILT FROM BALLOT ===');
-    console.error('Ballot:', currentBallot);
-    console.error('This ballot will appear empty!');
-  } else if (currentBallot) {
-    console.log('=== BALLOT DISPLAY DEBUG ===');
-    console.log('Ballot rankings:', currentBallot.rankings);
-    console.log('Selections built:', selections);
-    console.log('All candidates:', allCandidates.map(c => ({id: c.id, name: c.name})));
-    
-    // Verify all ballot candidate IDs exist in allCandidates
-    const ballotIds = Object.keys(selections);
-    const candidateIds = new Set(allCandidates.map(c => c.id));
-    const missing = ballotIds.filter(id => !candidateIds.has(id));
-    
-    if (missing.length > 0) {
-      console.error('CRITICAL ID MISMATCH!');
-      console.error('These IDs are in ballot but NOT in allCandidates:', missing);
-      console.error('This will cause empty display!');
-    }
-  }
+  const bgColor = highlight === 'green'
+    ? 'success.50'
+    : highlight === 'red'
+      ? 'error.50'
+      : 'background.paper';
 
   return (
     <Paper
-      elevation={0}
+      variant="outlined"
       sx={{
-        p: { xs: 1.5, sm: 2 },
-        border: `1px solid ${getBorderColor()}`,
-        backgroundColor: getBackgroundColor(),
-        minHeight: { xs: 400, sm: 450 },
-        height: { xs: 'auto', sm: 450 },
-        display: 'flex',
-        flexDirection: 'column',
+        px: { xs: 1.5, sm: 2 },
+        py: 1,
+        borderColor,
+        backgroundColor: bgColor,
+        borderWidth: highlight ? 2 : 1,
       }}
     >
-      {/* Header */}
-      <Box sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" fontWeight="bold" gutterBottom sx={{ fontSize: { xs: '0.95rem', sm: '1rem' } }}>
-          {getGroupTitle()}
+      {/* Candidate 1 */}
+      <Box sx={{ display: 'flex', alignItems: 'center', py: 0.5, px: 0.5 }}>
+        <Radio
+          checked={sel.cand1}
+          disabled
+          sx={{
+            p: 0.5, mr: 1, flexShrink: 0,
+            '& .MuiSvgIcon-root': { fontSize: 26 },
+          }}
+        />
+        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+          {cand1.name}
         </Typography>
-        <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-          {getGroupDescription()}
-        </Typography>
-        <Box display="flex" alignItems="center" gap={1} mt={0.5} flexWrap="wrap">
-          <Chip
-            label={`${stats.toLocaleString()} total votes`}
-            color={getChipColor()}
-            size="small"
-          />
-          <Chip
-            label={`${totalCount.toLocaleString()} unique ballots`}
-            variant="outlined"
-            size="small"
-          />
-        </Box>
       </Box>
 
-      {/* Carousel with Navigation */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        {/* Navigation */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1} flexWrap="wrap" gap={1}>
-          <Box display="flex" alignItems="center" gap={1}>
-            <IconButton 
-              onClick={handlePrevious} 
-              disabled={ballots.length <= 1}
-              size="small"
-            >
-              <ArrowBackIcon />
-            </IconButton>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-              Ballot {currentIndex + 1} of {totalCount}
-            </Typography>
-            <IconButton 
-              onClick={handleNext} 
-              disabled={ballots.length <= 1}
-              size="small"
-            >
-              <ArrowForwardIcon />
-            </IconButton>
-          </Box>
-          {currentBallot?.count > 1 && (
-            <Chip 
-              label={`Count: ${currentBallot.count.toLocaleString()}`} 
-              size="small" 
-              color="secondary" 
-              variant="outlined"
-            />
-          )}
-        </Box>
-
-        {/* Ballot Table Display */}
-        <Box sx={{ 
-          flex: 1,
-          backgroundColor: 'background.paper', 
-          borderRadius: 1,
-          overflow: 'auto',
-          minHeight: 0,
-        }}>
-          {currentBallot ? (
-            currentBallot.rankings && currentBallot.rankings.length > 0 ? (
-              <>
-                {console.log('BallotCarousel passing pollNumRanks:', pollNumRanks, 'to ReadOnlyVotingTable')}
-                <ReadOnlyVotingTable
-                  candidates={allCandidates}
-                  selections={selections}
-                  title=""
-                  highlightCandidates={getHighlightColors()}
-                  maxRank={pollNumRanks}
-                />
-              </>
-            ) : (
-              <Box p={3} textAlign="center">
-                <Typography color="error">
-                  This ballot has no rankings!
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Ballot ID: {currentBallot.ballot_id}
-                </Typography>
-              </Box>
-            )
-          ) : (
-            <CircularProgress />
-          )}
-        </Box>
-
-        {/* Load more or progress indicator */}
-        {(hasMore || loading) && (
-          <Box sx={{ mt: 1 }}>
-            {loading ? (
-              <LinearProgress sx={{ height: 2 }} />
-            ) : hasMore && ballots.length >= 10 && (
-              <Box textAlign="center">
-                <Button
-                  size="small"
-                  onClick={loadMore}
-                  startIcon={<ExpandMoreIcon />}
-                  variant="text"
-                >
-                  Load more ({ballots.length} of {totalCount})
-                </Button>
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {/* Progress dots for small sets */}
-        {totalCount <= 10 && ballots.length > 1 && (
-          <Box display="flex" justifyContent="center" gap={0.5} mt={1}>
-            {ballots.map((_, idx) => (
-              <Box
-                key={idx}
-                sx={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: idx === currentIndex ? getBorderColor() : 'grey.300',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                }}
-                onClick={() => setCurrentIndex(idx)}
-              />
-            ))}
-          </Box>
-        )}
+      {/* Candidate 2 */}
+      <Box sx={{ display: 'flex', alignItems: 'center', py: 0.5, px: 0.5 }}>
+        <Radio
+          checked={sel.cand2}
+          disabled
+          sx={{
+            p: 0.5, mr: 1, flexShrink: 0,
+            '& .MuiSvgIcon-root': { fontSize: 26 },
+          }}
+        />
+        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+          {cand2.name}
+        </Typography>
       </Box>
+
+      {/* Status labels */}
+      {sel.cand1 && sel.cand2 && (
+        <Typography variant="caption" color="warning.dark" sx={{ display: 'block', mt: 0.5, ml: 4.5, fontStyle: 'italic' }}>
+          Both selected: No preference recorded
+        </Typography>
+      )}
+      {!sel.cand1 && !sel.cand2 && (
+        <Typography variant="caption" color="warning.dark" sx={{ display: 'block', mt: 0.5, ml: 4.5, fontStyle: 'italic' }}>
+          Neither selected: No preference recorded
+        </Typography>
+      )}
     </Paper>
+  );
+};
+
+/**
+ * BallotDisplay - shows a single ballot's matchups with optional matchup highlighting.
+ */
+const BallotDisplay = ({ ballot, candidates, matchups, focusMatchup }) => {
+  const choices = ballot.pairwise_choices || [];
+
+  // Build selections lookup
+  const selectionsMap = {};
+  choices.forEach((choice) => {
+    const key = matchupKey(choice.cand1_id, choice.cand2_id);
+    const isFlipped = choice.cand2_id < choice.cand1_id;
+    if (choice.choice === 'tie') {
+      selectionsMap[key] = { cand1: true, cand2: true };
+    } else if (choice.choice === 'neither') {
+      selectionsMap[key] = { cand1: false, cand2: false };
+    } else if (!isFlipped) {
+      selectionsMap[key] = {
+        cand1: choice.choice === 'cand1',
+        cand2: choice.choice === 'cand2',
+      };
+    } else {
+      selectionsMap[key] = {
+        cand1: choice.choice === 'cand2',
+        cand2: choice.choice === 'cand1',
+      };
+    }
+  });
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, maxWidth: 420, mx: 'auto' }}>
+      {matchups.map((matchup) => {
+        const sel = selectionsMap[matchup.key] || { cand1: false, cand2: false };
+
+        // Determine highlight for this matchup
+        let highlight = null;
+        if (focusMatchup && matchup.key === focusMatchup.key) {
+          const isTie = sel.cand1 && sel.cand2;
+          const isBlank = !sel.cand1 && !sel.cand2;
+          if (isTie || isBlank) {
+            highlight = 'warning';
+          } else if (sel.cand1) {
+            // cand1 selected — green if cand1 is the "focus" winner side
+            highlight = 'green';
+          } else {
+            highlight = 'green';
+          }
+
+          // More precise: green for winner, red for loser in this matchup
+          if (!isTie && !isBlank) {
+            // The selected candidate gets green border
+            highlight = 'green';
+          }
+        }
+
+        return (
+          <MatchupCard
+            key={matchup.key}
+            cand1={matchup.cand1}
+            cand2={matchup.cand2}
+            sel={sel}
+            highlight={highlight}
+          />
+        );
+      })}
+    </Box>
   );
 };
 
 const PairwiseBallotViewer = ({ pollId, isOpen, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [comparisons, setComparisons] = useState([]);
-  const [selectedComparison, setSelectedComparison] = useState(null);
-  const [ballotData, setBallotData] = useState(null);
-  const [allCandidates, setAllCandidates] = useState([]);
-  const [pollNumRanks, setPollNumRanks] = useState(null);
+  const [allBallots, setAllBallots] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [selectedMatchup, setSelectedMatchup] = useState('all');
+  const [activeTab, setActiveTab] = useState(0); // 0 = cand1 wins, 1 = cand2 wins, 2 = tie/neither
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Fetch all available comparisons
+  const matchups = useMemo(() => generateMatchups(candidates), [candidates]);
+
   useEffect(() => {
     if (isOpen && pollId) {
-      fetchComparisons();
+      fetchData();
     }
   }, [isOpen, pollId]);
 
-  const fetchComparisons = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      
-      // Get poll data for candidates
-      const pollResponse = await API.get(`/polls/${pollId}`);
-      const pollCandidates = pollResponse.data.candidates || [];
-      const numRanks = pollResponse.data.num_ranks || pollCandidates.length;
-      
-      console.log('Poll API response num_ranks:', pollResponse.data.num_ranks);
-      console.log('Setting pollNumRanks to:', numRanks);
-      setPollNumRanks(numRanks);
-      
-      // Get all comparisons
-      const response = await API.get(`/pairwise-ballots/poll/${pollId}/all-comparisons`);
-      setComparisons(response.data.comparisons);
-      
-      // Build complete candidate list
-      const candidateMap = new Map();
-      
-      // CRITICAL: Use the exact IDs from poll candidates
-      pollCandidates.forEach(c => {
-        candidateMap.set(c.id, {
-          id: c.id,
-          name: c.name,
-          is_write_in: false
-        });
-      });
-      
-      // Add write-in candidates with their exact IDs
-      response.data.comparisons.forEach(comp => {
-        if (comp.cand1.is_write_in && !candidateMap.has(comp.cand1.id)) {
-          candidateMap.set(comp.cand1.id, {
-            id: comp.cand1.id,
-            name: comp.cand1.name,
-            is_write_in: true
-          });
-        }
-        if (comp.cand2.is_write_in && !candidateMap.has(comp.cand2.id)) {
-          candidateMap.set(comp.cand2.id, {
-            id: comp.cand2.id,
-            name: comp.cand2.name,
-            is_write_in: true
-          });
-        }
-      });
-      
-      setAllCandidates(Array.from(candidateMap.values()));
-      
-      // Auto-select first comparison
-      if (response.data.comparisons.length > 0) {
-        const first = response.data.comparisons[0];
-        setSelectedComparison(`${first.cand1.id}|${first.cand2.id}`);
-      }
-      
       setError('');
+
+      const [pollResp, ballotsResp] = await Promise.all([
+        API.get(`/polls/${pollId}`),
+        API.get(`/ballots/poll/${pollId}/public`),
+      ]);
+
+      setCandidates(pollResp.data.candidates || []);
+      setAllBallots(ballotsResp.data || []);
+      setCurrentIndex(0);
+      setSelectedMatchup('all');
+      setActiveTab(0);
     } catch (err) {
-      console.error('Error fetching comparisons:', err);
-      setError('Failed to load comparison data');
+      console.error('Error fetching ballot data:', err);
+      setError('Failed to load ballot data');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch ballot data for selected comparison
-  useEffect(() => {
-    if (selectedComparison && pollId) {
-      fetchBallotData();
-    }
-  }, [selectedComparison, pollId]);
+  // Get the focused matchup object
+  const focusMatchup = useMemo(() => {
+    if (selectedMatchup === 'all') return null;
+    return matchups.find((m) => m.key === selectedMatchup) || null;
+  }, [selectedMatchup, matchups]);
 
-  const fetchBallotData = async () => {
-    try {
-      const [cand1Id, cand2Id] = selectedComparison.split('|');
-      const response = await API.get(
-        `/pairwise-ballots/poll/${pollId}/pairwise`,
-        { 
-          params: { 
-            cand1_id: cand1Id, 
-            cand2_id: cand2Id
-          }
-        }
+  // Filter and group ballots by the selected matchup
+  const filteredBallots = useMemo(() => {
+    if (!focusMatchup) return { all: allBallots };
+
+    const cand1Wins = [];
+    const cand2Wins = [];
+    const tieOrNeither = [];
+
+    allBallots.forEach((ballot) => {
+      const choice = (ballot.pairwise_choices || []).find(
+        (c) => c.cand1_id === focusMatchup.cand1.id && c.cand2_id === focusMatchup.cand2.id
       );
-      
-      // COMPLETELY REBUILD candidate list from scratch using ballot data
-      const candidateMap = new Map();
-      
-      // Process ALL ballots to find ALL candidates
-      const allBallotGroups = [
-        ...(response.data.ballots.cand1_wins || []),
-        ...(response.data.ballots.cand2_wins || []),
-        ...(response.data.ballots.tie || []),
-        ...(response.data.ballots.undefined || [])
-      ];
-      
-      console.log('Processing', allBallotGroups.length, 'ballots to find all candidates');
-      
-      // Extract every unique candidate from every ballot
-      allBallotGroups.forEach((ballot, idx) => {
-        if (!ballot.rankings || ballot.rankings.length === 0) {
-          console.warn(`Ballot ${idx} has no rankings!`, ballot);
-        } else {
-          ballot.rankings.forEach(ranking => {
-            const id = ranking.candidate_id;
-            const name = ranking.candidate_name || id;
-            
-            if (!candidateMap.has(id)) {
-              candidateMap.set(id, {
-                id: id,  // Use EXACT ID from ballot
-                name: name,
-                is_write_in: id.includes('write') || id.includes('writein')
-              });
-            }
-          });
-        }
-      });
-      
-      // Also include the two candidates being compared if not already there
-      if (!candidateMap.has(cand1Id)) {
-        candidateMap.set(cand1Id, {
-          id: cand1Id,
-          name: response.data.comparison.cand1.name || cand1Id,
-          is_write_in: false
-        });
+
+      if (!choice || choice.choice === 'neither') {
+        tieOrNeither.push(ballot);
+      } else if (choice.choice === 'cand1') {
+        cand1Wins.push(ballot);
+      } else if (choice.choice === 'cand2') {
+        cand2Wins.push(ballot);
+      } else if (choice.choice === 'tie') {
+        tieOrNeither.push(ballot);
       }
-      if (!candidateMap.has(cand2Id)) {
-        candidateMap.set(cand2Id, {
-          id: cand2Id,
-          name: response.data.comparison.cand2.name || cand2Id,
-          is_write_in: false
-        });
-      }
-      
-      const finalCandidates = Array.from(candidateMap.values());
-      console.log('Final candidate list built from ballot data:', finalCandidates);
-      console.log('Candidate IDs:', finalCandidates.map(c => c.id));
-      
-      // Update both local and parent state
-      setAllCandidates(finalCandidates);
-      setBallotData(response.data);
-    } catch (err) {
-      console.error('Error fetching ballot data:', err);
-      setError('Failed to load ballot data');
-    }
+    });
+
+    return { cand1Wins, cand2Wins, tieOrNeither };
+  }, [allBallots, focusMatchup]);
+
+  // Get the current list based on tab
+  const currentList = useMemo(() => {
+    if (!focusMatchup) return filteredBallots.all || [];
+    if (activeTab === 0) return filteredBallots.cand1Wins || [];
+    if (activeTab === 1) return filteredBallots.cand2Wins || [];
+    return filteredBallots.tieOrNeither || [];
+  }, [filteredBallots, focusMatchup, activeTab]);
+
+  const totalVotes = useMemo(
+    () => allBallots.reduce((sum, b) => sum + (b.count || 1), 0),
+    [allBallots]
+  );
+
+  const currentBallot = currentList[currentIndex];
+
+  // Count votes in each group
+  const countVotes = (list) => list.reduce((sum, b) => sum + (b.count || 1), 0);
+
+  // Reset index when changing matchup or tab
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [selectedMatchup, activeTab]);
+
+  const handlePrevious = () => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : currentList.length - 1));
   };
 
-  const handleComparisonChange = (event) => {
-    setSelectedComparison(event.target.value);
-    setBallotData(null); // Clear old data when switching
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev < currentList.length - 1 ? prev + 1 : 0));
   };
 
   return (
     <Dialog
       open={isOpen}
       onClose={onClose}
-      maxWidth="xl"
+      maxWidth="sm"
       fullWidth
       fullScreen={window.innerWidth < 600}
-      PaperProps={{
-        sx: { height: { xs: '100vh', sm: '90vh' } }
-      }}
     >
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
-          <VisibilityIcon color="primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
-          <Typography variant="h6" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Pairwise Ballot Viewer</Typography>
+          <VisibilityIcon color="primary" />
+          <Typography variant="h6">Ballot Viewer</Typography>
+          <Chip
+            label={`${totalVotes} vote${totalVotes !== 1 ? 's' : ''}`}
+            color="primary"
+            size="small"
+            sx={{ ml: 'auto' }}
+          />
         </Box>
       </DialogTitle>
-      
+
       <DialogContent dividers sx={{ p: { xs: 1.5, sm: 3 } }}>
         {loading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
             <CircularProgress />
           </Box>
         ) : error ? (
           <Alert severity="error">{error}</Alert>
+        ) : allBallots.length === 0 ? (
+          <Box textAlign="center" py={4}>
+            <Typography color="text.secondary">No ballots have been submitted yet.</Typography>
+          </Box>
         ) : (
           <Box>
-            {/* Comparison Selector */}
-            <Box sx={{ mb: 3 }}>
-              <FormControl fullWidth>
-                <InputLabel>Select Comparison</InputLabel>
-                <Select
-                  value={selectedComparison || ''}
-                  onChange={handleComparisonChange}
-                  label="Select Comparison"
-                  startAdornment={<CompareArrowsIcon sx={{ mr: 1, color: 'text.secondary' }} />}
-                >
-                  {comparisons.map((comp) => {
-                    const value = `${comp.cand1.id}|${comp.cand2.id}`;
-                    const totalVotes = Object.values(comp.quick_stats).reduce((a, b) => a + b, 0);
-                    
-                    return (
-                      <MenuItem key={value} value={value}>
-                        <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" width="100%" gap={{ xs: 0.5, sm: 0 }}>
-                          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                            <Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-                              {comp.cand1.name} vs {comp.cand2.name}
-                            </Typography>
-                            {(comp.cand1.is_write_in || comp.cand2.is_write_in) && (
-                              <Chip label="write-in" size="small" color="secondary" />
-                            )}
-                          </Box>
-                          <Typography variant="caption" color="text.secondary">
-                            {totalVotes.toLocaleString()} votes
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
-            </Box>
+            {/* Matchup selector */}
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Focus on matchup</InputLabel>
+              <Select
+                value={selectedMatchup}
+                onChange={(e) => setSelectedMatchup(e.target.value)}
+                label="Focus on matchup"
+                startAdornment={<CompareArrowsIcon sx={{ mr: 1, color: 'text.secondary' }} />}
+              >
+                <MenuItem value="all">All ballots (no filter)</MenuItem>
+                {matchups.map((m) => (
+                  <MenuItem key={m.key} value={m.key}>
+                    {m.cand1.name} vs {m.cand2.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            {/* Ballot Groups */}
-            {ballotData && (
-              <Box>
-                <Typography variant="h6" gutterBottom sx={{ mb: 2, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                  {ballotData.comparison.cand1.name} vs {ballotData.comparison.cand2.name}
+            {/* Tabs for filtered groups */}
+            {focusMatchup && (
+              <Tabs
+                value={activeTab}
+                onChange={(e, v) => setActiveTab(v)}
+                sx={{
+                  mb: 2,
+                  '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, minHeight: 40 },
+                }}
+                variant="fullWidth"
+              >
+                <Tab
+                  label={`${focusMatchup.cand1.name} (${countVotes(filteredBallots.cand1Wins || [])})`}
+                  sx={{ color: 'success.main' }}
+                />
+                <Tab
+                  label={`${focusMatchup.cand2.name} (${countVotes(filteredBallots.cand2Wins || [])})`}
+                  sx={{ color: 'success.main' }}
+                />
+                <Tab
+                  label={`Tie/Skip (${countVotes(filteredBallots.tieOrNeither || [])})`}
+                />
+              </Tabs>
+            )}
+
+            {/* Navigation */}
+            {currentList.length > 0 ? (
+              <>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ mb: 2 }}
+                >
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <IconButton
+                      onClick={handlePrevious}
+                      disabled={currentList.length <= 1}
+                      size="small"
+                    >
+                      <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="body2" color="text.secondary">
+                      Ballot {currentIndex + 1} of {currentList.length}
+                    </Typography>
+                    <IconButton
+                      onClick={handleNext}
+                      disabled={currentList.length <= 1}
+                      size="small"
+                    >
+                      <ArrowForwardIcon />
+                    </IconButton>
+                  </Box>
+
+                  {currentBallot?.count > 1 && (
+                    <Chip
+                      label={`${currentBallot.count} voter${currentBallot.count !== 1 ? 's' : ''}`}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+
+                {/* Ballot display */}
+                {currentBallot && (
+                  <BallotDisplay
+                    ballot={currentBallot}
+                    candidates={candidates}
+                    matchups={matchups}
+                    focusMatchup={focusMatchup}
+                  />
+                )}
+
+                {/* Progress dots */}
+                {currentList.length > 1 && currentList.length <= 15 && (
+                  <Box display="flex" justifyContent="center" gap={0.5} mt={2}>
+                    {currentList.map((_, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: idx === currentIndex ? 'primary.main' : 'grey.300',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                        onClick={() => setCurrentIndex(idx)}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box textAlign="center" py={3}>
+                <Typography color="text.secondary">
+                  No ballots in this group.
                 </Typography>
-                
-                {/* Summary Stats at the top */}
-                <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 2 }, mb: 3, backgroundColor: 'grey.50' }}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Votes
-                      </Typography>
-                      <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-                        {ballotData.total_votes.toLocaleString()}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Valid Comparisons
-                      </Typography>
-                      <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-                        {(ballotData.votes_with_comparison || (ballotData.total_votes - (ballotData.stats.undefined || 0))).toLocaleString()}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        out of {ballotData.total_votes.toLocaleString()} votes
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Winner
-                      </Typography>
-                      <Typography variant="h5" color="primary" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-                        {ballotData.stats.cand1_wins > ballotData.stats.cand2_wins
-                          ? ballotData.comparison.cand1.name
-                          : ballotData.stats.cand2_wins > ballotData.stats.cand1_wins
-                          ? ballotData.comparison.cand2.name
-                          : 'Tie'}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} sm={3}>
-                      <Typography variant="body2" color="text.secondary">
-                        Margin of Victory
-                      </Typography>
-                      <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-                        {Math.abs(ballotData.stats.cand1_wins - ballotData.stats.cand2_wins).toLocaleString()}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Paper>
-                
-                {/* Display Non-Empty Ballot Groups Only */}
-                {(() => {
-                  const cand1Wins = ballotData.stats.cand1_wins > ballotData.stats.cand2_wins;
-                  const isTie = ballotData.stats.cand1_wins === ballotData.stats.cand2_wins;
-                  const winnerGroupType = cand1Wins ? 'cand1_wins' : 'cand2_wins';
-                  const loserGroupType = cand1Wins ? 'cand2_wins' : 'cand1_wins';
-                  
-                  // Build array of groups to display (only non-empty ones)
-                  const groupsToDisplay = [];
-                  
-                  // Add winner group if it has votes (not a tie)
-                  if (!isTie && ballotData.stats[winnerGroupType] > 0) {
-                    groupsToDisplay.push({
-                      type: winnerGroupType,
-                      isWinner: true,
-                      stats: ballotData.stats[winnerGroupType],
-                      ballots: ballotData.ballots[winnerGroupType],
-                      count: ballotData.ballot_counts[winnerGroupType]
-                    });
-                  }
-                  
-                  // Add loser group if it has votes (not a tie)
-                  if (!isTie && ballotData.stats[loserGroupType] > 0) {
-                    groupsToDisplay.push({
-                      type: loserGroupType,
-                      isWinner: false,
-                      stats: ballotData.stats[loserGroupType],
-                      ballots: ballotData.ballots[loserGroupType],
-                      count: ballotData.ballot_counts[loserGroupType]
-                    });
-                  }
-                  
-                  // For ties, show both as equals if they have votes
-                  if (isTie) {
-                    if (ballotData.stats.cand1_wins > 0) {
-                      groupsToDisplay.push({
-                        type: 'cand1_wins',
-                        isWinner: null,
-                        stats: ballotData.stats.cand1_wins,
-                        ballots: ballotData.ballots.cand1_wins,
-                        count: ballotData.ballot_counts.cand1_wins
-                      });
-                    }
-                    if (ballotData.stats.cand2_wins > 0) {
-                      groupsToDisplay.push({
-                        type: 'cand2_wins',
-                        isWinner: null,
-                        stats: ballotData.stats.cand2_wins,
-                        ballots: ballotData.ballots.cand2_wins,
-                        count: ballotData.ballot_counts.cand2_wins
-                      });
-                    }
-                  }
-                  
-                  // Add tie group if it has votes
-                  if (ballotData.stats.tie > 0) {
-                    groupsToDisplay.push({
-                      type: 'tie',
-                      isWinner: null,
-                      stats: ballotData.stats.tie,
-                      ballots: ballotData.ballots.tie,
-                      count: ballotData.ballot_counts.tie
-                    });
-                  }
-                  
-                  // Add undefined group if it has votes
-                  if (ballotData.stats.undefined > 0) {
-                    groupsToDisplay.push({
-                      type: 'undefined',
-                      isWinner: null,
-                      stats: ballotData.stats.undefined,
-                      ballots: ballotData.ballots.undefined,
-                      count: ballotData.ballot_counts.undefined
-                    });
-                  }
-                  
-                  // Display groups using flexbox for precise width control
-                  return (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexWrap: 'wrap',
-                      gap: 2,
-                      '& > *': {
-                        // Mobile: Single column
-                        flex: { 
-                          xs: '1 1 100%',
-                          sm: groupsToDisplay.length === 1 ? '1 1 100%' :
-                              groupsToDisplay.length === 2 ? '1 1 calc(50% - 8px)' :
-                              groupsToDisplay.length === 3 ? '1 1 calc(33.333% - 11px)' :
-                              groupsToDisplay.length === 4 ? '0 0 calc(50% - 8px)' :
-                              '1 1 calc(33.333% - 11px)'
-                        },
-                        maxWidth: { 
-                          xs: '100%',
-                          sm: groupsToDisplay.length === 4 ? 'calc(50% - 8px)' : 'none'
-                        },
-                      }
-                    }}>
-                      {groupsToDisplay.map((group) => (
-                        <Box key={group.type}>
-                          <BallotCarousel
-                            groupType={group.type}
-                            comparison={ballotData.comparison}
-                            stats={group.stats}
-                            allCandidates={allCandidates}
-                            isWinner={group.isWinner}
-                            pollId={pollId}
-                            initialBallots={group.ballots}
-                            totalCount={group.count}
-                            pollNumRanks={pollNumRanks}
-                          />
-                        </Box>
-                      ))}
-                      {/* If no groups have any votes, show a message */}
-                      {groupsToDisplay.length === 0 && (
-                        <Box sx={{ width: '100%' }}>
-                          <Alert severity="warning">
-                            No valid ballot comparisons found. All ballots may have undefined rankings due to skipped ranks above one or both candidates.
-                          </Alert>
-                        </Box>
-                      )}
-                    </Box>
-                  );
-                })()}
               </Box>
             )}
           </Box>
         )}
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+      <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+        <Button onClick={onClose} variant="outlined">
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   );

@@ -699,7 +699,7 @@ const PollCreatedSuccess = () => {
                 }}
               />
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
-                📊 View ranked-choice voting results and winner analysis.
+                📊 View pairwise voting results and winner analysis.
               </Typography>
             </CardContent>
           </Card>

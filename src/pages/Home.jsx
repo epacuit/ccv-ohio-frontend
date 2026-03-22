@@ -32,9 +32,11 @@ import {
   Diversity3 as CommunityIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import betterChoicesIcon from '../assets/BC4D-wht.png';
+import betterChoicesIcon from '../assets/betterchoices-white.png';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const HomePage = () => {
+  usePageTitle(null);
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -77,14 +79,15 @@ const HomePage = () => {
   
   const demoPolls = [
     {
-      title: "Alaska 2022 Special General Election",
-      description: "Experience Consensus Choice with real election data",
-      link: "/results/alaska2022",
+      title: "Favorite Ice Cream Flavor",
+      description: "What is your favorite flavor of ice cream?",
+      pollId: "ice-cream",
+      isLive: true,
     },
     {
-      title: "Favorite Ice Cream",
-      description: "Join our ongoing poll to rank your favorite ice cream flavors",
-      pollId: "ice-cream-poll",
+      title: "Favorite Ohio Football Team",
+      description: "Vote for your favorite Ohio football team in each matchup.",
+      pollId: "ohio-football",
       isLive: true,
     },
   ];
@@ -253,7 +256,7 @@ const HomePage = () => {
           {/* Better Choices Link */}
           <Box sx={{ mb: 2 }}>
             <Link
-              href="https://betterchoices.vote"
+              href="https://betterchoicesohio.org"
               target="_blank"
               rel="noopener"
               sx={{
@@ -274,7 +277,7 @@ const HomePage = () => {
                 },
               }}
             >
-              Learn more at BetterChoices.vote
+              Learn more at betterchoicesohio.org
               <ArrowIcon sx={{ ml: 1 }} />
             </Link>
           </Box>
@@ -289,14 +292,14 @@ const HomePage = () => {
     Perfect for Any Group Decision
   </Typography>
   
-  {/* Tagline with rankings emphasis */}
-  <Typography 
-    variant="h6" 
-    align="center" 
+  {/* Tagline with pairwise comparison emphasis */}
+  <Typography
+    variant="h6"
+    align="center"
     color="text.secondary"
     sx={{ mb: 4, fontWeight: 400 }}
   >
- Consensus Choice uses every voter's entire ranking - not just their top choice - to find the candidate with the widest appeal.
+ Consensus Choice compares every candidate head-to-head to find the one with the broadest support.
   </Typography>
   
   <List sx={{ maxWidth: '800px', mx: 'auto' }}>
@@ -369,9 +372,9 @@ const HomePage = () => {
             Try an Example
           </Typography>
           
-          <Grid container spacing={3} justifyContent="center">
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, maxWidth: 800, mx: 'auto' }}>
             {demoPolls.map((poll, index) => (
-              <Grid item xs={12} sm={6} md={5} key={index}>
+              <Box key={index}>
                 <Card 
                   elevation={0}
                   sx={{ 
@@ -454,9 +457,9 @@ const HomePage = () => {
                     </Box>
                   </CardContent>
                 </Card>
-              </Grid>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         </Box>
       </Container>
 

@@ -27,6 +27,7 @@ import API from '../services/api';
 import PollForm from '../components/shared/PollForm';
 import EmailListInput from '../components/shared/EmailListInput';
 import MarkdownHelp from '../components/MarkdownHelp';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const PollTypeSelector = ({ pollType, onChange }) => (
   <Box mt={3} mb={3}>
@@ -258,6 +259,7 @@ const SlugInput = ({ formData, onFormDataChange, errors, refs, showSlugInput }) 
 };
 
 const CreatePoll = ({ isEmbedded = false }) => {
+  usePageTitle('Create Poll');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const errorRefs = useRef({});
@@ -278,6 +280,7 @@ const CreatePoll = ({ isEmbedded = false }) => {
     description: '',
     options: [
       { name: '', description: '' },
+      { name: '', description: '' },
       { name: '', description: '' }
     ],
     is_private: false,
@@ -287,12 +290,9 @@ const CreatePoll = ({ isEmbedded = false }) => {
     creator_email: '',
     slug: '',
     settings: {
-      allow_ties: true,
-      require_complete_ranking: false,
+      require_all_matchups: false,
       randomize_options: false,
-      allow_write_in: false,
       show_detailed_results: true,
-      show_rankings: true,
       results_visibility: 'public',
       can_view_before_close: false,
     },
@@ -306,7 +306,6 @@ const CreatePoll = ({ isEmbedded = false }) => {
         is_private: newType === 'private',
         settings: {
           ...formData.settings,
-          allow_write_in: false,
         },
       });
     }
@@ -363,6 +362,10 @@ const CreatePoll = ({ isEmbedded = false }) => {
           errors[`option_${index}_name`] = true;
         }
       });
+    }
+
+    if (validOptions.length > 4) {
+      errors.too_many_options = true;
     }
     
     const optionNames = formData.options
@@ -447,7 +450,6 @@ const CreatePoll = ({ isEmbedded = false }) => {
 
       const settings = {
         ...formData.settings,
-        num_ranks: formData.settings.num_ranks ? parseInt(formData.settings.num_ranks) : null
       };
 
       const pollData = {
@@ -631,6 +633,9 @@ const CreatePoll = ({ isEmbedded = false }) => {
                       )}
                       {authMethod === 'email' && fieldErrors.creator_email && (
                         <li>Valid email address is required</li>
+                      )}
+                      {fieldErrors.too_many_options && (
+                        <li>Maximum 4 candidates allowed for pairwise comparison voting</li>
                       )}
                     </ul>
                   </Alert>

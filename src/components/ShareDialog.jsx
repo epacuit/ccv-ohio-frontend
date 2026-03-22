@@ -29,7 +29,7 @@ const ShareDialog = ({ open, onClose, poll, shareUrl }) => {
   
   // Generate share text
   const shareTitle = poll?.title || 'Check out this poll';
-  const shareText = `${shareTitle} - Check out this poll from BetterChoices!`;
+  const shareText = `${shareTitle} - Check out this poll from Better Choices for Ohio!`;
   const encodedText = encodeURIComponent(shareText);
   const encodedUrl = encodeURIComponent(shareUrl);
   

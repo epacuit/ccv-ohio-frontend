@@ -30,6 +30,7 @@ const PollOptionsList = ({
   fieldErrors = {},
   errorRefs = {},
   minOptions = 2,
+  maxOptions = 4,
   canModifyOptions = true,
   showAddButton = true,
 }) => {
@@ -60,10 +61,17 @@ const PollOptionsList = ({
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">
-          Poll Options ({options.length})
-        </Typography>
-        {isEditing && showAddButton && canModifyOptions && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h6">
+            Poll Options ({options.length})
+          </Typography>
+          {options.length >= maxOptions && (
+            <Typography variant="caption" color="text.secondary">
+              (maximum {maxOptions})
+            </Typography>
+          )}
+        </Box>
+        {isEditing && showAddButton && canModifyOptions && options.length < maxOptions && (
           <Button
             startIcon={<AddIcon />}
             onClick={onOptionAdd}

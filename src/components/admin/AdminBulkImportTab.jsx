@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Grid,
-  Card,
-  CardContent,
   Typography,
   Button,
   Alert,
@@ -15,10 +13,6 @@ import {
   LinearProgress,
   FormControlLabel,
   Checkbox,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   Stack,
   Divider,
   Chip,
@@ -31,19 +25,29 @@ import {
   CheckCircle as CheckIcon,
   Error as ErrorIcon,
   Description as FileIcon,
-  Group as GroupIcon,
-  Assignment as AssignmentIcon,
   Info as InfoIcon,
-  TableChart as TableIcon,
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import API from '../../services/api';
 
 /**
- * AdminBulkImportTab Component
- * 
- * Handles bulk import of ballots via CSV
+ * Generate matchup column headers from candidates.
+ * Returns array of { header: "A vs B", cand1: {id, name}, cand2: {id, name} }
  */
+function generateMatchupHeaders(candidates) {
+  const matchups = [];
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      matchups.push({
+        header: `${candidates[i].name} vs ${candidates[j].name}`,
+        cand1: candidates[i],
+        cand2: candidates[j],
+      });
+    }
+  }
+  return matchups;
+}
+
 const AdminBulkImportTab = ({
   poll,
   onImportComplete,
@@ -62,34 +66,111 @@ const AdminBulkImportTab = ({
   const [validationErrors, setValidationErrors] = useState([]);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
 
-  const validateCandidateNames = (csvCandidates, pollCandidates) => {
+  const matchupHeaders = useMemo(
+    () => generateMatchupHeaders(poll?.options || []),
+    [poll?.options]
+  );
+
+  const exampleCsv = useMemo(() => {
+    if (!poll?.options || poll.options.length < 2) return '';
+    const headers = ['Count', ...matchupHeaders.map(m => m.header)];
+    const row1 = [5, ...matchupHeaders.map(m => m.cand1.name)];
+    const row2 = [3, ...matchupHeaders.map(m => m.cand2.name)];
+    const row3 = [2, ...matchupHeaders.map((m, i) => i === 0 ? 'both' : '')];
+    return [headers, row1, row2, row3].map(r => r.join(',')).join('\n');
+  }, [poll?.options, matchupHeaders]);
+
+  /**
+   * Parse a CSV cell value into a pairwise choice.
+   * Returns 'cand1', 'cand2', 'tie', or null (skip).
+   */
+  const parseCellValue = (value, cand1Name, cand2Name) => {
+    if (!value || !value.trim()) return null; // blank = skip
+    const v = value.trim().toLowerCase();
+    if (v === 'both') return 'tie';
+    if (v === cand1Name.toLowerCase()) return 'cand1';
+    if (v === cand2Name.toLowerCase()) return 'cand2';
+    return 'invalid';
+  };
+
+  const validateAndParseCSV = (csvText) => {
     const errors = [];
-    const pollNames = pollCandidates.map(opt => opt.name.toLowerCase());
-    const csvNamesLower = csvCandidates.map(name => name.toLowerCase());
-    
-    // Check for CSV candidates not in poll
-    csvCandidates.forEach((csvCandidate, index) => {
-      if (!pollNames.includes(csvCandidate.toLowerCase())) {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) {
+      errors.push({ message: 'CSV must have a header row and at least one data row' });
+      return { errors, preview: null };
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim());
+    const expectedHeaders = ['Count', ...matchupHeaders.map(m => m.header)];
+
+    // Validate headers match expected matchups
+    if (headers.length !== expectedHeaders.length) {
+      errors.push({
+        message: `Expected ${expectedHeaders.length} columns (Count + ${matchupHeaders.length} matchups), got ${headers.length}`,
+      });
+    }
+
+    // Check each matchup header
+    for (let i = 1; i < expectedHeaders.length; i++) {
+      if (i < headers.length && headers[i].toLowerCase() !== expectedHeaders[i].toLowerCase()) {
         errors.push({
-          type: 'missing_in_poll',
-          message: `CSV candidate "${csvCandidate}" not found in poll options`,
-          candidate: csvCandidate
+          message: `Column ${i + 1}: expected "${expectedHeaders[i]}", got "${headers[i]}"`,
         });
       }
-    });
-    
-    // Check for poll candidates not in CSV
-    pollCandidates.forEach(pollOption => {
-      if (!csvNamesLower.includes(pollOption.name.toLowerCase())) {
-        errors.push({
-          type: 'missing_in_csv',
-          message: `Poll option "${pollOption.name}" not found in CSV headers`,
-          candidate: pollOption.name
-        });
+    }
+
+    if (errors.length > 0) return { errors, preview: null };
+
+    // Parse data rows
+    const rows = lines.slice(1).filter(line => line.trim());
+    let totalBallots = 0;
+    let uniquePatterns = 0;
+    let cellErrors = [];
+
+    for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+      const values = rows[rowIdx].split(',').map(v => v.trim());
+      const count = values[0] ? parseInt(values[0]) : 1;
+      if (isNaN(count) || count <= 0) {
+        cellErrors.push(`Row ${rowIdx + 2}: invalid count "${values[0]}"`);
+        continue;
       }
-    });
-    
-    return errors;
+
+      // Validate each matchup cell
+      for (let colIdx = 0; colIdx < matchupHeaders.length; colIdx++) {
+        const cellValue = values[colIdx + 1] || '';
+        const result = parseCellValue(
+          cellValue,
+          matchupHeaders[colIdx].cand1.name,
+          matchupHeaders[colIdx].cand2.name
+        );
+        if (result === 'invalid') {
+          cellErrors.push(
+            `Row ${rowIdx + 2}, "${matchupHeaders[colIdx].header}": "${cellValue}" is not a valid choice. Use "${matchupHeaders[colIdx].cand1.name}", "${matchupHeaders[colIdx].cand2.name}", "both", or leave empty.`
+          );
+        }
+      }
+
+      totalBallots += count;
+      uniquePatterns++;
+    }
+
+    if (cellErrors.length > 0) {
+      // Show at most 5 cell errors
+      cellErrors.slice(0, 5).forEach(e => errors.push({ message: e }));
+      if (cellErrors.length > 5) {
+        errors.push({ message: `...and ${cellErrors.length - 5} more errors` });
+      }
+    }
+
+    return {
+      errors,
+      preview: errors.length === 0 ? {
+        matchupCount: matchupHeaders.length,
+        ballotCount: totalBallots,
+        uniquePatterns,
+      } : null,
+    };
   };
 
   const handleFileUpload = (event) => {
@@ -97,48 +178,36 @@ const AdminBulkImportTab = ({
     if (file) {
       setImportFile(file);
       setValidationErrors([]);
-      
+
       Papa.parse(file, {
         complete: (results) => {
-          if (results.data && results.data.length > 1) {
-            const headers = results.data[0];
-            const rows = results.data.slice(1).filter(row => row.length > 1);
-            
-            const candidateNames = headers.slice(1).filter(h => h && h.trim());
-            
-            // Validate candidate names
-            const errors = validateCandidateNames(candidateNames, poll.options);
-            setValidationErrors(errors);
-            
-            let totalBallots = 0;
-            let uniqueRankings = 0;
-            rows.forEach(row => {
-              const voterCount = row[0] ? parseInt(row[0]) : 1;
-              if (!isNaN(voterCount) && voterCount > 0) {
-                totalBallots += voterCount;
-                uniqueRankings++;
-              }
-            });
-            
-            const preview = {
-              candidateNames,
-              ballotCount: totalBallots,
-              uniqueRankings: uniqueRankings,
-              sampleRows: rows.slice(0, 5),
-              hasErrors: errors.length > 0
-            };
-            
-            setParsedData(preview);
-            setImportData(results.data.map(row => row.join(',')).join('\n'));
-          }
+          const csvText = results.data.map(row => row.join(',')).join('\n');
+          setImportData(csvText);
+          const { errors, preview } = validateAndParseCSV(csvText);
+          setValidationErrors(errors);
+          setParsedData(preview);
         },
-        error: (error) => {
+        error: () => {
           onError('Failed to parse CSV file');
-        }
+        },
       });
     }
   };
-  
+
+  const handlePasteDataChange = (e) => {
+    const text = e.target.value;
+    setImportData(text);
+    setValidationErrors([]);
+
+    if (text.trim()) {
+      const { errors, preview } = validateAndParseCSV(text);
+      setValidationErrors(errors);
+      setParsedData(preview);
+    } else {
+      setParsedData(null);
+    }
+  };
+
   const handleImportOpen = (method = 'csv') => {
     setImportMethod(method);
     setImportDialog(true);
@@ -146,7 +215,7 @@ const AdminBulkImportTab = ({
     setConfirmOverwrite(false);
     setValidationErrors([]);
   };
-  
+
   const handleImportClose = () => {
     setImportDialog(false);
     setImporting(false);
@@ -160,155 +229,98 @@ const AdminBulkImportTab = ({
   };
 
   const handleBulkImport = async () => {
-    // If overwrite is selected and not yet confirmed, show confirmation
     if (overwriteExisting && !confirmOverwrite) {
       setConfirmOverwrite(true);
       return;
     }
-    
+
     setImporting(true);
-    
+
     try {
-      // If overwrite is requested, first clear existing ballots
+      // Clear existing if requested
       if (overwriteExisting) {
         const authData = getAuthData();
         try {
           await API.delete(`/ballots/poll/${poll.id || poll.short_id}/clear?admin_token=${authData.admin_token}`);
-          console.log('Cleared existing ballots');
         } catch (clearError) {
           console.error('Error clearing ballots:', clearError);
-          // Continue with import even if clear fails
         }
       }
-      
+
       const lines = importData.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
-      const candidateNames = headers.slice(1).filter(h => h);
-      
-      // Final validation before import
-      const errors = validateCandidateNames(candidateNames, poll.options);
-      if (errors.length > 0) {
-        throw new Error('Candidate name mismatch. Please fix the CSV headers to match poll options.');
-      }
-      
-      const nameToOptionId = {};
-      poll.options.forEach(option => {
-        const matchingCandidate = candidateNames.find(
-          c => c.toLowerCase() === option.name.toLowerCase()
-        );
-        if (matchingCandidate) {
-          nameToOptionId[matchingCandidate] = option.id;
-        } else if (candidateNames.includes(option.name)) {
-          nameToOptionId[option.name] = option.id;
-        }
-      });
-      
       const ballots = [];
       let totalVoterCount = 0;
-      
+
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim());
-        if (values.length <= 1) continue;
-        
-        const voterCount = values[0] ? parseInt(values[0]) : 1;
-        if (isNaN(voterCount) || voterCount <= 0) continue;
-        
-        const rankings = [];
-        
-        candidateNames.forEach((candidateName, index) => {
-          const rankValue = values[index + 1];
-          if (rankValue && !isNaN(rankValue) && parseInt(rankValue) > 0) {
-            rankings.push({
-              candidate_id: nameToOptionId[candidateName],  // Changed from option_id
-              rank: parseInt(rankValue)
-            });
-          }
-        });
-        
-        if (rankings.length > 0) {
-          // Create one ballot record with count instead of duplicating
-          ballots.push({
-            poll_id: poll.id || poll.short_id,
-            rankings: rankings,
-            count: voterCount,  // Use count field instead of duplicating
-            test_mode_key: 'admin_import'
+        if (!values[0] && values.length <= 1) continue;
+
+        const count = values[0] ? parseInt(values[0]) : 1;
+        if (isNaN(count) || count <= 0) continue;
+
+        const pairwiseChoices = [];
+
+        for (let colIdx = 0; colIdx < matchupHeaders.length; colIdx++) {
+          const cellValue = values[colIdx + 1] || '';
+          const choice = parseCellValue(
+            cellValue,
+            matchupHeaders[colIdx].cand1.name,
+            matchupHeaders[colIdx].cand2.name
+          );
+
+          if (choice === 'invalid') continue;
+
+          pairwiseChoices.push({
+            cand1_id: matchupHeaders[colIdx].cand1.id,
+            cand2_id: matchupHeaders[colIdx].cand2.id,
+            choice: choice || 'neither',
           });
-          totalVoterCount += voterCount;
         }
-        
-        // Update progress
+
+        if (pairwiseChoices.length > 0) {
+          ballots.push({
+            pairwise_choices: pairwiseChoices,
+            count: count,
+          });
+          totalVoterCount += count;
+        }
+
         setImportProgress((i / lines.length) * 100);
       }
-      
+
       if (ballots.length === 0) {
         throw new Error('No valid ballots found in CSV');
       }
-      
+
       const authData = getAuthData();
       const requestData = {
         poll_id: poll.id || poll.short_id,
         admin_token: authData.admin_token,
-        ballots: ballots
+        ballots: ballots,
       };
-      
-      console.log('Importing ballots:', requestData);
+
       const response = await API.post('/ballots/bulk-import', requestData);
-      
-      logAdminAction('BULK_IMPORT', `Imported ${response.data.imported_count || response.data.total_votes || ballots.length} ballots from ${totalVoterCount} voters${overwriteExisting ? ' (replaced existing)' : ''}`, {
-        method: importMethod,
-        count: response.data.imported_count || response.data.total_votes || ballots.length,
-        totalVoters: totalVoterCount,
-        filename: importFile?.name,
-        overwrite: overwriteExisting
-      });
-      
+
+      logAdminAction(
+        'BULK_IMPORT',
+        `Imported ${response.data.total_votes || ballots.length} ballots${overwriteExisting ? ' (replaced existing)' : ''}`,
+        {
+          method: importMethod,
+          count: response.data.total_votes || ballots.length,
+          totalVoters: totalVoterCount,
+          filename: importFile?.name,
+          overwrite: overwriteExisting,
+        }
+      );
+
       handleImportClose();
       onImportComplete();
-      
     } catch (err) {
       console.error('Bulk import error:', err);
       onError('Failed to import ballots: ' + (err.response?.data?.detail || err.message));
     } finally {
       setImporting(false);
       setConfirmOverwrite(false);
-    }
-  };
-
-  const handlePasteDataChange = (e) => {
-    setImportData(e.target.value);
-    setValidationErrors([]);
-    
-    if (e.target.value.trim()) {
-      const lines = e.target.value.trim().split('\n');
-      if (lines.length > 1) {
-        const headers = lines[0].split(',').map(h => h.trim());
-        const candidateNames = headers.slice(1).filter(h => h);
-        const rows = lines.slice(1).filter(line => line.split(',').length > 1);
-        
-        // Validate candidate names
-        const errors = validateCandidateNames(candidateNames, poll.options);
-        setValidationErrors(errors);
-        
-        let totalBallots = 0;
-        let uniqueRankings = 0;
-        rows.forEach(line => {
-          const values = line.split(',');
-          const voterCount = values[0] ? parseInt(values[0]) : 1;
-          if (!isNaN(voterCount) && voterCount > 0) {
-            totalBallots += voterCount;
-            uniqueRankings++;
-          }
-        });
-        
-        setParsedData({
-          candidateNames,
-          ballotCount: totalBallots,
-          uniqueRankings: uniqueRankings,
-          hasErrors: errors.length > 0
-        });
-      }
-    } else {
-      setParsedData(null);
     }
   };
 
@@ -323,13 +335,12 @@ const AdminBulkImportTab = ({
   return (
     <>
       <Stack spacing={3}>
-        {/* Header Section */}
         <Box>
           <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
             Import Ballots
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Import multiple ballots at once using CSV format. Each row represents a unique ranking pattern with voter counts.
+            Import multiple ballots at once using CSV format. Each row represents a unique set of pairwise choices with a voter count.
           </Typography>
         </Box>
 
@@ -338,7 +349,7 @@ const AdminBulkImportTab = ({
           <Grid item xs={12} md={6}>
             <Paper
               elevation={0}
-              sx={{ 
+              sx={{
                 p: 3,
                 cursor: 'pointer',
                 border: '1px solid',
@@ -349,41 +360,33 @@ const AdminBulkImportTab = ({
                   borderColor: 'primary.main',
                   backgroundColor: 'action.hover',
                   transform: 'translateY(-2px)',
-                }
+                },
               }}
               onClick={() => handleImportOpen('csv')}
             >
               <Stack direction="row" spacing={2} alignItems="center">
                 <Box
                   sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 1,
+                    width: 48, height: 48, borderRadius: 1,
                     backgroundColor: 'primary.light',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     opacity: 0.9,
                   }}
                 >
                   <FileUploadIcon sx={{ color: 'primary.main' }} />
                 </Box>
                 <Box flex={1}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Upload CSV File
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Select a file from your computer
-                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Upload CSV File</Typography>
+                  <Typography variant="body2" color="text.secondary">Select a file from your computer</Typography>
                 </Box>
               </Stack>
             </Paper>
           </Grid>
-          
+
           <Grid item xs={12} md={6}>
             <Paper
               elevation={0}
-              sx={{ 
+              sx={{
                 p: 3,
                 cursor: 'pointer',
                 border: '1px solid',
@@ -394,32 +397,24 @@ const AdminBulkImportTab = ({
                   borderColor: 'primary.main',
                   backgroundColor: 'action.hover',
                   transform: 'translateY(-2px)',
-                }
+                },
               }}
               onClick={() => handleImportOpen('paste')}
             >
               <Stack direction="row" spacing={2} alignItems="center">
                 <Box
                   sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 1,
+                    width: 48, height: 48, borderRadius: 1,
                     backgroundColor: 'primary.light',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     opacity: 0.9,
                   }}
                 >
                   <PasteIcon sx={{ color: 'primary.main' }} />
                 </Box>
                 <Box flex={1}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Paste CSV Data
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Copy and paste from spreadsheet
-                  </Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Paste CSV Data</Typography>
+                  <Typography variant="body2" color="text.secondary">Copy and paste from spreadsheet</Typography>
                 </Box>
               </Stack>
             </Paper>
@@ -431,80 +426,58 @@ const AdminBulkImportTab = ({
           <Stack spacing={2}>
             <Box display="flex" alignItems="center" gap={1}>
               <InfoIcon sx={{ fontSize: 20, color: 'primary.main' }} />
-              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                CSV Format Requirements
-              </Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>CSV Format</Typography>
             </Box>
-            
+
             <Stack spacing={1.5}>
               <Box display="flex" gap={1}>
-                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>
-                  1.
-                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>1.</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Header row:</strong> Count, {poll?.options?.map(o => o.name).join(', ') || 'Candidate names'}
+                  <strong>Header row:</strong> Count, then one column per matchup (e.g., "{matchupHeaders[0]?.header || 'A vs B'}")
                 </Typography>
               </Box>
-              
               <Box display="flex" gap={1}>
-                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>
-                  2.
-                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>2.</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>First column:</strong> Number of voters with this ranking (blank = 1)
+                  <strong>First column:</strong> Number of voters with this pattern (blank = 1)
                 </Typography>
               </Box>
-              
               <Box display="flex" gap={1}>
-                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>
-                  3.
-                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>3.</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Ranking values:</strong> 1 = first choice, 2 = second choice, etc.
-                </Typography>
-              </Box>
-              
-              <Box display="flex" gap={1}>
-                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>
-                  4.
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Leave cells empty for unranked options
+                  <strong>Each matchup cell:</strong> The preferred candidate's name, "<strong>both</strong>" for no preference, or leave empty to skip
                 </Typography>
               </Box>
             </Stack>
 
             <Divider sx={{ my: 1 }} />
-            
-            {/* Example Table */}
+
             <Box>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }} color="text.secondary">
                 Example:
               </Typography>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
+              <Paper
+                variant="outlined"
+                sx={{
                   p: 1.5,
                   backgroundColor: 'background.paper',
                   fontFamily: 'monospace',
-                  fontSize: '0.875rem'
+                  fontSize: '0.8rem',
+                  overflowX: 'auto',
                 }}
               >
-                <Box component="pre" sx={{ margin: 0, lineHeight: 1.5 }}>
-{`Count,${poll?.options?.slice(0, 3).map(o => o.name).join(',') || 'Alice,Bob,Charlie'}
-5,1,2,3
-3,2,1,3
-,3,2,1`}
+                <Box component="pre" sx={{ margin: 0, lineHeight: 1.5, whiteSpace: 'pre' }}>
+                  {exampleCsv}
                 </Box>
               </Paper>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                This example shows 5 voters ranking first candidate as #1, 3 voters with a different pattern, and 1 voter with another pattern
+                Empty cells mean the voter skipped that matchup. "both" means no preference between the two candidates.
               </Typography>
             </Box>
           </Stack>
         </Paper>
       </Stack>
-      
+
       {/* Import Dialog */}
       <Dialog
         open={importDialog}
@@ -513,10 +486,7 @@ const AdminBulkImportTab = ({
         fullWidth
         PaperProps={{
           elevation: 0,
-          sx: {
-            border: '1px solid',
-            borderColor: 'divider',
-          }
+          sx: { border: '1px solid', borderColor: 'divider' },
         }}
       >
         <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -527,7 +497,7 @@ const AdminBulkImportTab = ({
             </Typography>
           </Stack>
         </DialogTitle>
-        
+
         <DialogContent sx={{ mt: 2 }}>
           <Stack spacing={3}>
             {importMethod === 'csv' && (
@@ -546,35 +516,26 @@ const AdminBulkImportTab = ({
                       component="span"
                       startIcon={<FileUploadIcon />}
                       fullWidth
-                      sx={{ 
+                      sx={{
                         py: 1.5,
                         borderStyle: 'dashed',
-                        '&:hover': {
-                          borderStyle: 'solid'
-                        }
+                        '&:hover': { borderStyle: 'solid' },
                       }}
                     >
                       {importFile ? 'Change File' : 'Select CSV File'}
                     </Button>
                   </label>
                 </Box>
-                
+
                 {importFile && (
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: 2, 
-                      backgroundColor: 'grey.50',
-                      border: '1px solid',
-                      borderColor: 'divider'
-                    }}
+                  <Paper
+                    elevation={0}
+                    sx={{ p: 2, backgroundColor: 'grey.50', border: '1px solid', borderColor: 'divider' }}
                   >
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <FileIcon sx={{ color: 'text.secondary' }} />
                       <Box flex={1}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {importFile.name}
-                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{importFile.name}</Typography>
                         <Typography variant="caption" color="text.secondary">
                           {(importFile.size / 1024).toFixed(1)} KB
                         </Typography>
@@ -584,7 +545,7 @@ const AdminBulkImportTab = ({
                 )}
               </>
             )}
-            
+
             {importMethod === 'paste' && (
               <>
                 <Typography variant="body2" color="text.secondary">
@@ -595,29 +556,29 @@ const AdminBulkImportTab = ({
                   rows={10}
                   fullWidth
                   variant="outlined"
-                  placeholder={`Count,${poll?.options?.map(o => o.name).join(',') || 'Alice,Bob,Charlie'}\n5,1,2,3\n3,2,1,3\n,3,2,1`}
+                  placeholder={exampleCsv}
                   value={importData}
                   onChange={handlePasteDataChange}
                   sx={{
                     '& .MuiInputBase-root': {
                       fontFamily: 'monospace',
                       fontSize: '0.875rem',
-                    }
+                    },
                   }}
                 />
               </>
             )}
-            
+
             {/* Data Preview */}
-            {parsedData && !parsedData.hasErrors && (
-              <Paper 
-                elevation={0} 
-                sx={{ 
+            {parsedData && (
+              <Paper
+                elevation={0}
+                sx={{
                   p: 2,
                   backgroundColor: 'success.light',
                   border: '1px solid',
                   borderColor: 'success.main',
-                  borderRadius: 1
+                  borderRadius: 1,
                 }}
               >
                 <Stack spacing={1}>
@@ -627,64 +588,35 @@ const AdminBulkImportTab = ({
                       Data Preview
                     </Typography>
                   </Box>
-                  
+
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        Total Ballots
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {parsedData.ballotCount}
-                      </Typography>
+                      <Typography variant="caption" color="text.secondary">Total Ballots</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>{parsedData.ballotCount}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        Unique Rankings
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {parsedData.uniqueRankings}
-                      </Typography>
+                      <Typography variant="caption" color="text.secondary">Unique Patterns</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>{parsedData.uniquePatterns}</Typography>
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                      <Typography variant="caption" color="text.secondary">
-                        Candidates
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {parsedData.candidateNames.length}
-                      </Typography>
+                      <Typography variant="caption" color="text.secondary">Matchups</Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>{parsedData.matchupCount}</Typography>
                     </Grid>
                   </Grid>
-                  
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" gutterBottom>
-                      Detected candidates:
-                    </Typography>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
-                      {parsedData.candidateNames.map((name, idx) => (
-                        <Chip 
-                          key={idx} 
-                          label={name} 
-                          size="small" 
-                          variant="outlined"
-                          sx={{ mb: 0.5 }}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
                 </Stack>
               </Paper>
             )}
-            
+
             {/* Validation Errors */}
             {validationErrors.length > 0 && (
-              <Paper 
-                elevation={0} 
-                sx={{ 
+              <Paper
+                elevation={0}
+                sx={{
                   p: 2,
                   backgroundColor: 'error.light',
                   border: '1px solid',
                   borderColor: 'error.main',
-                  borderRadius: 1
+                  borderRadius: 1,
                 }}
               >
                 <Stack spacing={1.5}>
@@ -694,35 +626,22 @@ const AdminBulkImportTab = ({
                       Validation Errors
                     </Typography>
                   </Box>
-                  
+
                   {validationErrors.map((error, index) => (
                     <Box key={index} display="flex" alignItems="flex-start" gap={1}>
-                      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>
-                        •
-                      </Typography>
-                      <Typography variant="body2" color="error.dark">
-                        {error.message}
-                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24 }}>•</Typography>
+                      <Typography variant="body2" color="error.dark">{error.message}</Typography>
                     </Box>
                   ))}
-                  
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                    Please ensure CSV headers exactly match poll option names (case-insensitive)
-                  </Typography>
                 </Stack>
               </Paper>
             )}
-            
+
             {/* Overwrite Option */}
             {!confirmOverwrite && !validationErrors.length && parsedData && (
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  backgroundColor: 'grey.50',
-                  border: '1px solid',
-                  borderColor: 'divider'
-                }}
+              <Paper
+                elevation={0}
+                sx={{ p: 2, backgroundColor: 'grey.50', border: '1px solid', borderColor: 'divider' }}
               >
                 <FormControlLabel
                   control={
@@ -734,9 +653,7 @@ const AdminBulkImportTab = ({
                   }
                   label={
                     <Stack spacing={0.5}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        Replace existing ballots
-                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>Replace existing ballots</Typography>
                       <Typography variant="caption" color="text.secondary">
                         Warning: This will delete all existing ballots before importing
                       </Typography>
@@ -745,34 +662,24 @@ const AdminBulkImportTab = ({
                 />
               </Paper>
             )}
-            
+
             {/* Overwrite Confirmation */}
             {confirmOverwrite && (
-              <Alert 
-                severity="warning" 
-                icon={<WarningIcon />}
-                sx={{ 
-                  '& .MuiAlert-message': { width: '100%' }
-                }}
-              >
+              <Alert severity="warning" icon={<WarningIcon />} sx={{ '& .MuiAlert-message': { width: '100%' } }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }} gutterBottom>
                   Confirm Overwrite
                 </Typography>
                 <Typography variant="body2">
-                  This will permanently delete all existing ballots for this poll and replace them with the imported data.
+                  This will permanently delete all existing ballots and replace them with the imported data.
                   This action cannot be undone.
                 </Typography>
               </Alert>
             )}
-            
+
             {/* Import Progress */}
             {importing && (
               <Stack spacing={1}>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={importProgress}
-                  sx={{ height: 6, borderRadius: 3 }}
-                />
+                <LinearProgress variant="determinate" value={importProgress} sx={{ height: 6, borderRadius: 3 }} />
                 <Typography variant="body2" color="text.secondary" align="center">
                   {overwriteExisting ? 'Replacing ballots...' : 'Importing ballots...'} {Math.round(importProgress)}%
                 </Typography>
@@ -780,24 +687,12 @@ const AdminBulkImportTab = ({
             )}
           </Stack>
         </DialogContent>
-        
+
         <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Button 
-            onClick={handleImportClose} 
-            disabled={importing}
-            variant="text"
-          >
-            Cancel
-          </Button>
+          <Button onClick={handleImportClose} disabled={importing} variant="text">Cancel</Button>
           {confirmOverwrite ? (
             <>
-              <Button
-                onClick={() => setConfirmOverwrite(false)}
-                disabled={importing}
-                variant="outlined"
-              >
-                Back
-              </Button>
+              <Button onClick={() => setConfirmOverwrite(false)} disabled={importing} variant="outlined">Back</Button>
               <Button
                 onClick={handleBulkImport}
                 variant="contained"
@@ -813,7 +708,7 @@ const AdminBulkImportTab = ({
               onClick={handleBulkImport}
               variant="contained"
               disabled={!canImport()}
-              color={overwriteExisting ? "warning" : "primary"}
+              color={overwriteExisting ? 'warning' : 'primary'}
               startIcon={<FileUploadIcon />}
             >
               {overwriteExisting ? 'Replace & Import' : 'Import Ballots'}

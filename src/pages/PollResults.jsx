@@ -14,6 +14,7 @@ import {
 import API from '../services/api';
 import PollDetails from '../components/PollDetails';
 import ResultsDisplay from '../components/ResultsDisplay';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const PollResults = () => {
   const { pollId } = useParams();
@@ -24,6 +25,8 @@ const PollResults = () => {
   const [poll, setPoll] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+
+  usePageTitle(poll?.title ? `Results: ${poll.title}` : 'Results');
 
   // Generate share URL
   const shareUrl = `${window.location.origin}/results/${pollId}`;

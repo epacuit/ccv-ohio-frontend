@@ -80,11 +80,11 @@ const ResultsDisplay = ({
   const getWinnerExplanation = () => {
     switch (winnerType) {
       case 'condorcet':
-        return 'Beats every other candidate head-to-head';
+        return 'Wins all of their head-to-head matchups';
       case 'most_wins':
         return 'Has the best win-loss record';
       case 'smallest_loss':
-        return 'Has the smallest loss among all candidates with the most wins';
+        return 'Has the smallest loss';
       case 'tie':
         return 'There is a tie in the head-to-head comparisons';
       default:
@@ -328,641 +328,218 @@ const ResultsDisplay = ({
       </Paper>
 
       {/* Two Column Layout - Additional Details & Head-to-Head */}
-      <Box sx={{ 
+      <Box sx={{
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
         gap: 3,
-        mb: 4
+        mb: 4,
+        alignItems: 'start',
       }}>
-        {/* Left Column: Additional Details */}
-        <Box sx={{ order: { xs: 2, md: 1 } }}>
+        {/* Right Column: Additional Details */}
+        <Box sx={{ order: { xs: 2, md: 2 } }}>
           {matchupDetails && (
             <Paper
               elevation={0}
               sx={{
                 p: 3,
-                height: '100%',
                 bgcolor: 'background.paper',
                 border: '1px solid',
                 borderColor: 'divider',
               }}
             >
-              <Typography 
-                variant="h6" 
+              <Typography
+                variant="h6"
                 gutterBottom
                 sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}
               >
                 Additional Details
               </Typography>
               
-              {/* CONDORCET WINNER */}
-              {winnerType === 'condorcet' && matchupDetails.length === 1 && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                    {matchupDetails[0].candidate} defeats all other candidates in head-to-head comparisons. 
-                  </Typography>
-                  <Box sx={{ 
-                    bgcolor: 'grey.50', 
-                    borderRadius: 1, 
-                    p: 2,
-                    border: '1px solid',
-                    borderColor: 'grey.200'
-                  }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main', mb: 1, display: 'block' }}>
-                      {matchupDetails[0].candidate}'s Head-to-Head Matchups
-                    </Typography>
-                    {matchupDetails[0].victories.map((v, idx) => (
-                      <Typography key={idx} variant="body2" color="text.secondary" sx={{ mb: 0.75, pl: 1 }}>
-                        • Beats {v.opponent} by {v.margin.toLocaleString()} votes
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-              
-              {/* MOST WINS */}
-              {winnerType === 'most_wins' && matchupDetails.length === 1 && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                    No candidate beats all others head-to-head. {matchupDetails[0].candidate} has the highest score based on head-to-head matchups.
-                  </Typography>
-                  
-                  {/* Scoring Explanation */}
-                  <Box sx={{ 
-                    bgcolor: 'grey.50', 
-                    borderRadius: 1, 
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'grey.200'
-                  }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
-                      HOW THE SCORING WORKS
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Each candidate gets points based on their head-to-head matchups:<br/>
-                      • Each win earns 1 point<br/>
-                      • Each tie earns 0.5 points<br/>
-                      • Each loss earns 0 points
-                    </Typography>
-                  </Box>
+              {/* Build full candidate records from pairwise matrix */}
+              {(() => {
+                if (!results.pairwise_matrix) return null;
 
-                  {/* Copeland Scores */}
-                  {results.explanation?.copeland_scores && (() => {
-                    const winnerColor = getWinnerColor();
-                    const candidates = Object.keys(results.pairwise_matrix || {});
-                    
-                    const candidateRecords = {};
-                    candidates.forEach(candidate => {
-                      let wins = 0, losses = 0, ties = 0;
-                      const matchups = results.pairwise_matrix[candidate] || {};
-                      Object.entries(matchups).forEach(([opponent, margin]) => {
-                        if (margin > 0) wins++;
-                        else if (margin < 0) losses++;
-                        else ties++;
-                      });
-                      candidateRecords[candidate] = { wins, losses, ties };
-                    });
-                    
-                    return (
-                      <Box sx={{ mb: 2.5 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1.5 }}>
-                          FINAL SCORES
-                        </Typography>
-                        {Object.entries(results.explanation.copeland_scores)
-                          .sort(([,a], [,b]) => b - a)
-                          .map(([candidate, score]) => {
-                            const isWinner = candidate === matchupDetails[0].candidate;
-                            const record = candidateRecords[candidate] || { wins: 0, losses: 0, ties: 0 };
-                            const calculation = `${record.wins} ${record.wins === 1 ? 'win' : 'wins'}${record.ties > 0 ? ` + ${record.ties} ${record.ties === 1 ? 'tie' : 'ties'} × 0.5` : ''} = ${score} ${score === 1 ? 'point' : 'points'}`;
-                            
-                            return (
-                              <Box 
-                                key={candidate}
-                                sx={{ 
-                                  py: 0.75,
-                                  px: 1.5,
-                                  mb: 0.5,
-                                  borderRadius: 0.5,
-                                  bgcolor: isWinner ? alpha(winnerColor, 0.1) : 'transparent',
-                                  border: isWinner ? `1px solid ${alpha(winnerColor, 0.3)}` : '1px solid transparent'
-                                }}
-                              >
-                                <Box sx={{ 
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  mb: 0.25
-                                }}>
-                                  <Typography 
-                                    variant="body2" 
-                                    sx={{ 
-                                      fontWeight: isWinner ? 600 : 400,
-                                      color: isWinner ? winnerColor : 'text.primary'
-                                    }}
-                                  >
-                                    {candidate}
-                                  </Typography>
-                                  <Typography 
-                                    variant="body2" 
-                                    sx={{ 
-                                      fontWeight: isWinner ? 600 : 500,
-                                      color: isWinner ? winnerColor : 'text.primary'
-                                    }}
-                                  >
-                                    {score} {score === 1 ? 'point' : 'points'}
-                                  </Typography>
-                                </Box>
-                                <Typography 
-                                  variant="caption" 
-                                  sx={{ 
-                                    color: 'text.secondary',
-                                    fontStyle: 'italic',
-                                    display: 'block',
-                                    pl: 1
-                                  }}
-                                >
-                                  {calculation}
-                                </Typography>
-                              </Box>
-                            );
-                          })}
-                      </Box>
-                    );
-                  })()}
-                </Box>
-              )}
-              
-              {/* SMALLEST LOSS */}
-              {winnerType === 'smallest_loss' && matchupDetails.length === 1 && (
-                <Box>
-                  {results.explanation?.candidates_with_most_wins && (() => {
-                    const tiedCandidates = results.explanation.candidates_with_most_wins;
-                    const winnerColor = getWinnerColor();
-                    let tiedText = '';
-                    
-                    if (tiedCandidates.length === 2) {
-                      tiedText = `${tiedCandidates[0]} and ${tiedCandidates[1]} are tied for the most wins.`;
-                    } else if (tiedCandidates.length > 2) {
-                      const lastCandidate = tiedCandidates[tiedCandidates.length - 1];
-                      const otherCandidates = tiedCandidates.slice(0, -1).join(', ');
-                      tiedText = `${otherCandidates}, and ${lastCandidate} are tied for the most wins.`;
-                    } else {
-                      tiedText = `${matchupDetails[0].candidate} has the most wins.`;
-                    }
-                    
-                    return (
-                      <>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                          {tiedText}
-                        </Typography>
-                        
-                        {/* Scoring System */}
-                        <Box sx={{ 
-                          bgcolor: 'grey.50', 
-                          borderRadius: 1, 
-                          p: 2,
-                          mb: 2,
-                          border: '1px solid',
-                          borderColor: 'grey.200'
-                        }}>
-                          <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
-                            HOW THE SCORING WORKS
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Each candidate gets points based on their head-to-head matchups:<br/>
-                            • Each win earns 1 point<br/>
-                            • Each tie earns 0.5 points<br/>
-                            • Each loss earns 0 points
-                          </Typography>
-                        </Box>
+                const candidates = Object.keys(results.pairwise_matrix);
+                const winnerColor = getWinnerColor();
+                const winnerNames = hasTie ? tiedWinners : (winner ? [winner] : []);
 
-                        {/* Copeland Scores with highlighting */}
-                        {results.explanation?.copeland_scores && (() => {
-                          const candidates = Object.keys(results.pairwise_matrix || {});
-                          
-                          const candidateRecords = {};
-                          candidates.forEach(candidate => {
-                            let wins = 0, losses = 0, ties = 0;
-                            const matchups = results.pairwise_matrix[candidate] || {};
-                            Object.entries(matchups).forEach(([opponent, margin]) => {
-                              if (margin > 0) wins++;
-                              else if (margin < 0) losses++;
-                              else ties++;
-                            });
-                            candidateRecords[candidate] = { wins, losses, ties };
-                          });
-                          
-                          return (
-                            <Box sx={{ mb: 2.5 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1.5 }}>
-                                FINAL SCORES
-                              </Typography>
-                              {Object.entries(results.explanation.copeland_scores)
-                                .sort(([,a], [,b]) => b - a)
-                                .map(([candidate, score]) => {
-                                  const isTiedForMostWins = tiedCandidates.includes(candidate);
-                                  const isWinner = candidate === matchupDetails[0].candidate;
-                                  const record = candidateRecords[candidate] || { wins: 0, losses: 0, ties: 0 };
-                                  const calculation = `${record.wins} ${record.wins === 1 ? 'win' : 'wins'}${record.ties > 0 ? ` + ${record.ties} ${record.ties === 1 ? 'tie' : 'ties'} × 0.5` : ''} = ${score} ${score === 1 ? 'point' : 'points'}`;
-                                  
-                                  return (
-                                    <Box 
-                                      key={candidate}
-                                      sx={{ 
-                                        py: 0.75,
-                                        px: 1.5,
-                                        mb: 0.5,
-                                        borderRadius: 0.5,
-                                        bgcolor: isWinner ? alpha(winnerColor, 0.1) : (isTiedForMostWins ? alpha(winnerColor, 0.05) : 'transparent'),
-                                        border: isWinner ? `1px solid ${alpha(winnerColor, 0.3)}` : (isTiedForMostWins ? `1px solid ${alpha(winnerColor, 0.15)}` : '1px solid transparent')
-                                      }}
-                                    >
-                                      <Box sx={{ 
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        mb: 0.25
-                                      }}>
-                                        <Typography 
-                                          variant="body2" 
-                                          sx={{ 
-                                            fontWeight: isWinner ? 600 : (isTiedForMostWins ? 500 : 400),
-                                            color: isWinner ? winnerColor : (isTiedForMostWins ? winnerColor : 'text.primary')
-                                          }}
-                                        >
-                                          {candidate}
-                                        </Typography>
-                                        <Typography 
-                                          variant="body2" 
-                                          sx={{ 
-                                            fontWeight: isWinner ? 600 : (isTiedForMostWins ? 500 : 400),
-                                            color: isWinner ? winnerColor : (isTiedForMostWins ? winnerColor : 'text.secondary')
-                                          }}
-                                        >
-                                          {score} {score === 1 ? 'point' : 'points'}
-                                        </Typography>
-                                      </Box>
-                                      <Typography 
-                                        variant="caption" 
-                                        sx={{ 
-                                          color: 'text.secondary',
-                                          fontStyle: 'italic',
-                                          display: 'block',
-                                          pl: 1
-                                        }}
-                                      >
-                                        {calculation}
-                                      </Typography>
-                                    </Box>
-                                  );
-                                })}
-                            </Box>
-                          );
-                        })()}
-                        
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                          Among {tiedCandidates.length === 2 
-                            ? `${tiedCandidates[0]} and ${tiedCandidates[1]}` 
-                            : tiedCandidates.join(', ')}, {matchupDetails[0].candidate} has the smallest loss.
-                        </Typography>
-                      </>
-                    );
-                  })()}
-                  
-                  {/* Loss Comparisons */}
-                  {results.explanation?.loss_sequences && (
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1.5 }}>
-                        LOSS COMPARISONS
-                      </Typography>
-                      {Object.entries(results.explanation.loss_sequences)
-                        .map(([candidate, losses]) => {
-                          const isWinner = candidate === matchupDetails[0].candidate;
-                          const winnerColor = getWinnerColor();
-                          
-                          const candidateMatchups = results.pairwise_matrix[candidate] || {};
-                          const lossDetails = [];
-                          Object.entries(candidateMatchups).forEach(([opponent, margin]) => {
-                            if (margin < 0) {
-                              lossDetails.push({ opponent, margin: Math.abs(margin) });
-                            }
-                          });
-                          lossDetails.sort((a, b) => a.margin - b.margin);
-                          
-                          return (
-                            <Box 
-                              key={candidate}
-                              sx={{ 
-                                bgcolor: isWinner ? alpha(winnerColor, 0.08) : 'grey.50',
-                                borderRadius: 1, 
-                                p: 2,
-                                mb: 1.5,
-                                border: '1px solid',
-                                borderColor: isWinner ? alpha(winnerColor, 0.2) : 'grey.200'
-                              }}
-                            >
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  fontWeight: isWinner ? 700 : 600, 
-                                  color: isWinner ? winnerColor : 'error.main',
-                                  mb: 1, 
-                                  display: 'block' 
-                                }}
-                              >
-                                {candidate.toUpperCase()}'S LOSSES (SMALLEST TO LARGEST)
-                              </Typography>
-                              {lossDetails.length > 0 ? (
-                                lossDetails.map((loss, idx) => (
-                                  <Typography 
-                                    key={idx} 
-                                    variant="body2" 
-                                    color="text.secondary" 
-                                    sx={{ 
-                                      mb: 0.75, 
-                                      pl: 1,
-                                      fontWeight: isWinner && idx === 0 ? 600 : 400
-                                    }}
-                                  >
-                                    • Loses to {loss.opponent} by {loss.margin.toLocaleString()} {loss.margin === 1 ? 'vote' : 'votes'}
-                                  </Typography>
-                                ))
-                              ) : (
-                                <Typography variant="body2" color="text.secondary" sx={{ pl: 1 }}>
-                                  No losses
-                                </Typography>
-                              )}
-                            </Box>
-                          );
-                        })}
-                    </Box>
-                  )}
-                </Box>
-              )}
-              
-              {/* TIE */}
-              {winnerType === 'tie' && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                    Multiple candidates have identical head-to-head records.
-                  </Typography>
-                  {matchupDetails.map((detail, idx) => (
-                    <Box 
-                      key={idx} 
-                      sx={{ 
-                        mb: 2,
-                        p: 2,
-                        bgcolor: 'grey.50',
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'grey.200'
-                      }}
-                    >
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: getWinnerColor() }}>
-                        {detail.candidate}
-                      </Typography>
-                      {detail.victories.length > 0 && (
-                        <>
-                          <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>Wins:</Typography>
-                          {detail.victories.map((v, vidx) => (
-                            <Typography key={vidx} variant="body2" color="text.secondary" sx={{ mb: 0.5, pl: 1 }}>
-                              • Beats {v.opponent} by {v.margin.toLocaleString()}
-                            </Typography>
-                          ))}
-                        </>
-                      )}
-                      {detail.losses.length > 0 && (
-                        <>
-                          <Typography variant="caption" color="error.main" sx={{ fontWeight: 600 }}>Losses:</Typography>
-                          {detail.losses.map((l, lidx) => (
-                            <Typography key={lidx} variant="body2" color="text.secondary" sx={{ mb: 0.5, pl: 1 }}>
-                              • Loses to {l.opponent} by {l.margin.toLocaleString()}
-                            </Typography>
-                          ))}
-                        </>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-              
-              {/* Ballot Statistics - UPDATED WITH CLEANER TERMINOLOGY */}
-              {results.statistics && (
-                <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <BarChartIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
-                    <Typography 
-                      variant="subtitle2" 
-                      sx={{ fontWeight: 600, color: 'text.primary' }}
-                    >
-                      Ballot Statistics
-                    </Typography>
-                  </Box>
-                  <Box sx={{ borderRadius: 1, p: 2.5 }}>
-                    {/* Total Voters - Prominent */}
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      mb: 2.5,
-                      pb: 2,
-                      borderBottom: '1px solid',
-                      borderColor: 'divider'
-                    }}>
-                      <PeopleIcon sx={{ mr: 1.5, color: 'primary.main', fontSize: 28 }} />
-                      <Box>
-                        <Typography variant="h5" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                          {results.statistics.total_votes.toLocaleString()}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Total Voters
-                        </Typography>
-                      </Box>
-                    </Box>
-                    
-                    {/* Voting Patterns - Single Column Layout */}
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-                      Voting Patterns
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {results.statistics.ranked_almost_all !== undefined && results.statistics.ranked_almost_all > 0 && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: { xs: 'flex-start', md: 'center' },
-                          justifyContent: { xs: 'flex-start', md: 'space-between' },
-                          flexDirection: { xs: 'column', md: 'row' },
-                          gap: { xs: 1, md: 0 }
-                        }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 80,
-                              minWidth: 80,
-                              flexShrink: 0,
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: 'grey.100',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                {results.statistics.ranked_almost_all}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Ranked (almost) all candidates
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
-                            All except possibly 1 candidate
-                          </Typography>
-                        </Box>
-                      )}
-                      
-                      {results.statistics.partial_ranking !== undefined && results.statistics.partial_ranking > 0 && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: { xs: 'flex-start', md: 'center' },
-                          justifyContent: { xs: 'flex-start', md: 'space-between' },
-                          flexDirection: { xs: 'column', md: 'row' },
-                          gap: { xs: 1, md: 0 }
-                        }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 80,
-                              minWidth: 80,
-                              flexShrink: 0,
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: 'grey.100',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                {results.statistics.partial_ranking}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Submitted a partial ranking
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
-                            Ranked 2+ candidates but not all
-                          </Typography>
-                        </Box>
-                      )}
-                      
-                      {results.statistics.had_gaps !== undefined && results.statistics.had_gaps > 0 && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: { xs: 'flex-start', md: 'center' },
-                          justifyContent: { xs: 'flex-start', md: 'space-between' },
-                          flexDirection: { xs: 'column', md: 'row' },
-                          gap: { xs: 1, md: 0 }
-                        }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 80,
-                              minWidth: 80,
-                              flexShrink: 0,
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: 'grey.100',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                {results.statistics.had_gaps}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Ballots had gaps
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
-                            Skipped rank numbers (e.g., 1, 3, 5)
-                          </Typography>
-                        </Box>
-                      )}
-                      
-                      {results.statistics.single_choice_only !== undefined && results.statistics.single_choice_only > 0 && (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: { xs: 'flex-start', md: 'center' },
-                          justifyContent: { xs: 'flex-start', md: 'space-between' },
-                          flexDirection: { xs: 'column', md: 'row' },
-                          gap: { xs: 1, md: 0 }
-                        }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <Box sx={{ 
-                              width: 80,
-                              minWidth: 80,
-                              flexShrink: 0,
-                              height: 40, 
-                              borderRadius: 1,
-                              bgcolor: 'grey.100',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mr: 2
-                            }}>
-                              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                                {results.statistics.single_choice_only}%
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              Bullet vote
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: { xs: 0, md: 2 }, pl: { xs: '96px', md: 0 } }}>
-                            Ranked only first choice
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                    
-                    {/* Note about overlapping characteristics - only show if gaps exist */}
-                    {results.statistics.had_gaps !== undefined && results.statistics.had_gaps > 0 && (
-                      <Typography 
-                        variant="caption" 
-                        color="text.secondary" 
-                        sx={{ 
-                          display: 'block', 
-                          mt: 2, 
-                          fontStyle: 'italic',
-                          textAlign: 'center'
-                        }}
-                      >
-                        Note: Gaps can occur with any number of ranked candidates
+                // Build each candidate's record
+                const candidateRecords = candidates.map(candidate => {
+                  const matchups = results.pairwise_matrix[candidate] || {};
+                  const wins = [];
+                  const losses = [];
+                  const ties = [];
+
+                  Object.entries(matchups).forEach(([opponent, margin]) => {
+                    if (margin > 0) wins.push({ opponent, margin });
+                    else if (margin < 0) losses.push({ opponent, margin: Math.abs(margin) });
+                    else ties.push({ opponent });
+                  });
+
+                  wins.sort((a, b) => b.margin - a.margin);
+                  losses.sort((a, b) => a.margin - b.margin);
+
+                  const smallestLoss = losses.length > 0 ? losses[0].margin : 0;
+
+                  return { candidate, wins, losses, ties, smallestLoss };
+                });
+
+                // Sort: winners first, then by fewest losses, then smallest loss margin
+                candidateRecords.sort((a, b) => {
+                  const aIsWinner = winnerNames.includes(a.candidate) ? 0 : 1;
+                  const bIsWinner = winnerNames.includes(b.candidate) ? 0 : 1;
+                  if (aIsWinner !== bIsWinner) return aIsWinner - bIsWinner;
+                  if (a.losses.length !== b.losses.length) return a.losses.length - b.losses.length;
+                  return a.smallestLoss - b.smallestLoss;
+                });
+
+                return (
+                  <Box>
+                    {/* CONDORCET */}
+                    {winnerType === 'condorcet' && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        <strong>{winner}</strong> is the Consensus Choice winner: wins all of their head-to-head matchups.
                       </Typography>
                     )}
-                    
-                    {/* View Ballots button */}
-                    {(pollId || CustomBallotViewer) && (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<BallotIcon />}
-                          onClick={() => setBallotViewerOpen(true)}
-                          sx={{ 
-                            textTransform: 'none',
-                            borderColor: 'divider',
-                            color: 'text.secondary',
-                            '&:hover': {
-                              borderColor: 'text.secondary',
-                              bgcolor: 'action.hover'
-                            }
+
+                    {/* NO CONDORCET - everyone has a loss (cycle) */}
+                    {(winnerType === 'smallest_loss') && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        No candidate is preferred over all others. Every candidate has at least one loss.{' '}
+                        <strong>{winner}</strong> wins with the smallest loss.
+                      </Typography>
+                    )}
+
+                    {/* ONE CANDIDATE WITH 0 LOSSES (most wins, no losses) */}
+                    {winnerType === 'most_wins' && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        <strong>{winner}</strong> wins with no head-to-head losses.
+                      </Typography>
+                    )}
+
+                    {/* TIE */}
+                    {winnerType === 'tie' && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        {tiedWinners.join(' and ')} are tied with identical head-to-head records.
+                      </Typography>
+                    )}
+
+                    {/* Candidate records */}
+                    {candidateRecords.map((record) => {
+                      const isWinner = winnerNames.includes(record.candidate);
+
+                      return (
+                        <Box
+                          key={record.candidate}
+                          sx={{
+                            mb: 1.5,
+                            p: 2,
+                            borderRadius: 1,
+                            bgcolor: isWinner ? alpha(winnerColor, 0.08) : 'grey.50',
+                            border: '1px solid',
+                            borderColor: isWinner ? alpha(winnerColor, 0.3) : 'grey.200',
                           }}
                         >
-                          View Ballots
-                        </Button>
-                      </Box>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 600,
+                              mb: 1,
+                              color: isWinner ? winnerColor : 'text.primary',
+                            }}
+                          >
+                            {record.candidate}
+                            {isWinner && winnerType !== 'tie' && (
+                              <Typography component="span" variant="caption" sx={{ ml: 1, color: winnerColor, fontWeight: 400 }}>
+                                — Winner
+                              </Typography>
+                            )}
+                          </Typography>
+
+                          {record.wins.length > 0 && (
+                            <Box sx={{ mb: 0.5 }}>
+                              {record.wins.map((w, idx) => (
+                                <Typography key={idx} variant="body2" sx={{ mb: 0.25, pl: 1, color: 'success.dark' }}>
+                                  Beats {w.opponent} by {w.margin.toLocaleString()}
+                                </Typography>
+                              ))}
+                            </Box>
+                          )}
+
+                          {record.losses.length > 0 && (
+                            <Box sx={{ mb: 0.5 }}>
+                              {record.losses.map((l, idx) => (
+                                <Typography
+                                  key={idx}
+                                  variant="body2"
+                                  sx={{
+                                    mb: 0.25,
+                                    pl: 1,
+                                    color: 'error.main',
+                                    fontWeight: isWinner && idx === 0 && winnerType === 'smallest_loss' ? 600 : 400,
+                                  }}
+                                >
+                                  Loses to {l.opponent} by {l.margin.toLocaleString()}
+                                  {isWinner && idx === 0 && winnerType === 'smallest_loss' && (
+                                    <Typography component="span" variant="caption" sx={{ ml: 0.5, fontWeight: 400, fontStyle: 'italic' }}>
+                                      (smallest loss)
+                                    </Typography>
+                                  )}
+                                </Typography>
+                              ))}
+                            </Box>
+                          )}
+
+                          {record.ties.length > 0 && (
+                            <Box>
+                              {record.ties.map((t, idx) => (
+                                <Typography key={idx} variant="body2" sx={{ mb: 0.25, pl: 1, color: 'text.secondary' }}>
+                                  Tied with {t.opponent}
+                                </Typography>
+                              ))}
+                            </Box>
+                          )}
+
+                          {record.losses.length === 0 && record.wins.length > 0 && winnerType !== 'condorcet' && (
+                            <Typography variant="caption" sx={{ pl: 1, color: 'success.main', fontStyle: 'italic' }}>
+                              No losses
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                );
+              })()}
+              
+              {/* Total votes and View Ballots */}
+              {results.statistics && (
+                <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PeopleIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {results.statistics.total_votes.toLocaleString()} ballot{results.statistics.total_votes !== 1 ? 's' : ''} cast
+                      </Typography>
+                    </Box>
+                    {(pollId || CustomBallotViewer) && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<BallotIcon />}
+                        onClick={() => setBallotViewerOpen(true)}
+                        sx={{
+                          textTransform: 'none',
+                          borderColor: 'divider',
+                          color: 'text.secondary',
+                          '&:hover': {
+                            borderColor: 'text.secondary',
+                            bgcolor: 'action.hover'
+                          }
+                        }}
+                      >
+                        View Ballots
+                      </Button>
                     )}
                   </Box>
                 </Box>
@@ -971,8 +548,8 @@ const ResultsDisplay = ({
           )}
         </Box>
         
-        {/* Right Column: Head-to-Head Table */}
-        <Box sx={{ order: { xs: 1, md: 2 } }}>
+        {/* Left Column: Head-to-Head Table */}
+        <Box sx={{ order: { xs: 1, md: 1 } }}>
           <HeadToHeadTable results={results} winnerColor={getWinnerColor()} />
         </Box>
       </Box>

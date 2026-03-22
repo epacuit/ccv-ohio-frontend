@@ -19,7 +19,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate, useLocation } from 'react-router-dom';
-import betterChoicesIcon from '../assets/BC4D-wht.png';
+import betterChoicesIcon from '../assets/betterchoices-white.png';
 
 const NavigationBar = () => {
   const navigate = useNavigate();

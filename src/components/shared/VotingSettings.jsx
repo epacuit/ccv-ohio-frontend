@@ -8,12 +8,11 @@ import SettingSwitch from './SettingSwitch';
 
 /**
  * VotingSettings Component
- * 
+ *
+ * Settings for pairwise comparison voting.
  * When votes exist:
- * - Allow ties: DISABLED (can't change)
- * - Require complete ranking: DISABLED (can't change)  
+ * - Require all matchups: DISABLED (can't change)
  * - Randomize options: EDITABLE (can change)
- * - Allow write-ins: EDITABLE (can change)
  */
 const VotingSettings = ({
   settings = {},
@@ -39,46 +38,30 @@ const VotingSettings = ({
 
       {!canModifyOptions && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          Tie and ranking requirements cannot be changed after voting starts
+          Matchup requirements cannot be changed after voting starts
         </Alert>
       )}
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <SettingSwitch
-          checked={settings.allow_ties !== false}
-          onChange={(e) => handleSettingChange('allow_ties', e.target.checked)}
-          label="Allow voters to rank options equally (ties)"
-          disabled={structuralSettingsLocked}  // DISABLED when votes exist
-        />
-
-        <SettingSwitch
-          checked={settings.require_complete_ranking === true}
-          onChange={(e) => handleSettingChange('require_complete_ranking', e.target.checked)}
-          label="Require voters to rank all options"
-          disabled={structuralSettingsLocked}  // DISABLED when votes exist
+          checked={settings.require_all_matchups === true}
+          onChange={(e) => handleSettingChange('require_all_matchups', e.target.checked)}
+          label="Require voters to complete every head-to-head matchup"
+          disabled={structuralSettingsLocked}
         />
 
         <SettingSwitch
           checked={settings.randomize_options === true}
           onChange={(e) => handleSettingChange('randomize_options', e.target.checked)}
           label="Randomize option order for each voter"
-          disabled={disabled}  // Only disabled in non-edit mode, CAN CHANGE with votes
+          disabled={disabled}
         />
-
-        {!isPrivatePoll && (
-          <SettingSwitch
-            checked={settings.allow_write_in === true}
-            onChange={(e) => handleSettingChange('allow_write_in', e.target.checked)}
-            label="Allow write-in candidates"
-            disabled={disabled}  // Only disabled in non-edit mode, CAN CHANGE with votes
-          />
-        )}
 
         <SettingSwitch
           checked={settings.allow_vote_updates !== false}
           onChange={(e) => handleSettingChange('allow_vote_updates', e.target.checked)}
           label="Allow voters to update their vote after submitting"
-          disabled={disabled}  // Only disabled in non-edit mode
+          disabled={disabled}
         />
       </Box>
     </Box>

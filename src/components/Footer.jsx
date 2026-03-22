@@ -23,10 +23,10 @@ const Footer = () => {
             color: 'rgba(255, 255, 255, 0.9)',
           }}
         >
-          For more information about Consensus Choice, visit{' '}
-          <Link 
-            href="https://betterchoices.vote" 
-            target="_blank" 
+          For more information, visit{' '}
+          <Link
+            href="https://betterchoicesohio.org"
+            target="_blank"
             rel="noopener"
             sx={{
               color: '#8a9abb',
@@ -39,7 +39,7 @@ const Footer = () => {
               },
             }}
           >
-            betterchoices.vote
+            betterchoicesohio.org
           </Link>
         </Typography>
       </Container>

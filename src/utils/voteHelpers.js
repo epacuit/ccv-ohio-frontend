@@ -1,22 +1,6 @@
 // utils/voteHelpers.js
 
 /**
- * Formats ballot data for API submission
- * USES candidate_id consistently (NOT option_id)
- */
-export const formatBallotData = (tableSelections = {}, pollId) => {
-  const rankings = Object.entries(tableSelections).map(([candidateId, rank]) => ({
-    candidate_id: candidateId,  // Use candidate_id consistently
-    rank: rank
-  }));
-
-  return {
-    poll_id: pollId,
-    rankings: rankings
-  };
-};
-
-/**
  * Shuffles candidates using Fisher-Yates algorithm
  */
 export const shuffleCandidates = (candidates) => {

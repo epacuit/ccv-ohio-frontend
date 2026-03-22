@@ -51,6 +51,7 @@ import PollForm from '../components/shared/PollForm';
 import EmailListInput from '../components/shared/EmailListInput';
 import VoterManagement from '../components/shared/VoterManagement';
 import AdminBulkImportTab from '../components/admin/AdminBulkImportTab';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 dayjs.extend(relativeTime);
 
@@ -329,6 +330,7 @@ const TabPanel = ({ children, value, index, ...other }) => {
 };
 
 const Admin = () => {
+  usePageTitle('Poll Admin');
   const { pollId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -404,12 +406,9 @@ const Admin = () => {
         closing_datetime: response.data.closing_at ? dayjs(response.data.closing_at) : null,
         is_completed: response.data.status === 'closed',
         settings: response.data.settings || {
-          allow_ties: true,
-          require_complete_ranking: false,
+          require_all_matchups: false,
           randomize_options: false,
-          allow_write_in: false,
           show_detailed_results: true,
-          show_rankings: true,
           results_visibility: 'public',
           can_view_before_close: false,
         }
@@ -826,8 +825,8 @@ const Admin = () => {
                               This poll has {statistics.total_votes} votes already submitted
                             </Typography>
                             <Typography variant="body2" sx={{ mt: 0.5 }}>
-                              • Cannot change: candidate names, ties setting, complete ranking requirement
-                              <br />• Can still edit: descriptions, title, randomize/write-in settings, closing date
+                              • Cannot change: candidate names, matchup requirements
+                              <br />• Can still edit: descriptions, title, randomize setting, closing date
                             </Typography>
                           </Alert>
                         )}
@@ -898,17 +897,17 @@ const Admin = () => {
                               </Grid>
                               <Grid item xs={12} sm={6}>
                                 <Typography variant="body2">
-                                  Allow ties: <strong>{poll?.settings?.allow_ties ? 'Yes' : 'No'}</strong>
+                                  All matchups required: <strong>{poll?.settings?.require_all_matchups ? 'Yes' : 'No'}</strong>
                                 </Typography>
                               </Grid>
                               <Grid item xs={12} sm={6}>
                                 <Typography variant="body2">
-                                  Complete ranking required: <strong>{poll?.settings?.require_complete_ranking ? 'Yes' : 'No'}</strong>
+                                  Randomize options: <strong>{poll?.settings?.randomize_options ? 'Yes' : 'No'}</strong>
                                 </Typography>
                               </Grid>
                               <Grid item xs={12} sm={6}>
                                 <Typography variant="body2">
-                                  Write-ins allowed: <strong>{poll?.settings?.allow_write_in ? 'Yes' : 'No'}</strong>
+                                  Vote updates allowed: <strong>{poll?.settings?.allow_vote_updates !== false ? 'Yes' : 'No'}</strong>
                                 </Typography>
                               </Grid>
                               {poll?.closing_datetime && (
@@ -1067,7 +1066,7 @@ const Admin = () => {
                 <Typography variant="body2">
                   • Candidate names (would invalidate votes)
                   <br />• Add or remove candidates
-                  <br />• Voting rules (ties, complete ranking, etc.)
+                  <br />• Voting rules (ties, pairwise comparisons, etc.)
                 </Typography>
               </Box>
               
