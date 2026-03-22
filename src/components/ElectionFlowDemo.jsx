@@ -314,11 +314,11 @@ const BallotCard = ({ matchups, choices, fillProgress, inPile, pileOffset, highl
 );
 
 const PairwiseBallotStep = ({ progress }) => {
-  // First ballot gets 30%. Ballots 2-3 share 45% (more time each). Last 25% is counting-up.
-  const FIRST_SHARE = 0.30;
-  const FAST_SHARE = 0.45;
+  // First ballot gets 35%. Ballots 2-3 share 35% (more time each). Last 30% is counting-up.
+  const FIRST_SHARE = 0.35;
+  const FAST_SHARE = 0.35;
   const EACH_FAST = FAST_SHARE / 2;
-  const DONE_SHARE = 0.25;
+  const DONE_SHARE = 0.30;
 
   let activeBallot, ballotProgress, doneProgress;
   doneProgress = 0;
@@ -359,38 +359,38 @@ const PairwiseBallotStep = ({ progress }) => {
     // 0.40-0.48: fill m2 (still highlighted)
     // 0.48-0.58: highlight m3
     // 0.58-0.66: fill m3 (still highlighted)
-    // 0.66-0.82: all done, no highlight
-    // 0.82+: shrink
+    // 0.58-0.75: pause — completed ballot stays visible
+    // 0.75+: shrink
     if (ballotProgress < 0.08) {
       fillCount = 0; highlightMatchup = -1;
-    } else if (ballotProgress < 0.20) {
+    } else if (ballotProgress < 0.18) {
       fillCount = 0; highlightMatchup = 0;
-    } else if (ballotProgress < 0.28) {
+    } else if (ballotProgress < 0.26) {
       fillCount = 1; highlightMatchup = 0;
-    } else if (ballotProgress < 0.40) {
+    } else if (ballotProgress < 0.36) {
       fillCount = 1; highlightMatchup = 1;
-    } else if (ballotProgress < 0.48) {
+    } else if (ballotProgress < 0.44) {
       fillCount = 2; highlightMatchup = 1;
-    } else if (ballotProgress < 0.58) {
+    } else if (ballotProgress < 0.52) {
       fillCount = 2; highlightMatchup = 2;
-    } else if (ballotProgress < 0.66) {
+    } else if (ballotProgress < 0.58) {
       fillCount = 3; highlightMatchup = 2;
     } else {
       fillCount = 3; highlightMatchup = -1;
     }
   } else if (activeBallot <= 2) {
-    // Ballots 2-5: pause, fill 3 matchups, pause, shrink
-    // 0.00-0.15: blank ballot visible (pause)
-    // 0.15-0.30: fill m1
-    // 0.30-0.45: fill m2
-    // 0.45-0.58: fill m3
-    // 0.58-0.72: pause
-    // 0.72+: shrink
-    if (ballotProgress < 0.15) {
+    // Ballots 2-3: pause, fill, longer pause, shrink
+    // 0.00-0.12: blank ballot visible (pause)
+    // 0.12-0.25: fill m1
+    // 0.25-0.38: fill m2
+    // 0.38-0.50: fill m3
+    // 0.50-0.75: pause — completed ballot stays visible
+    // 0.75+: shrink
+    if (ballotProgress < 0.12) {
       fillCount = 0;
-    } else if (ballotProgress < 0.30) {
+    } else if (ballotProgress < 0.25) {
       fillCount = 1;
-    } else if (ballotProgress < 0.45) {
+    } else if (ballotProgress < 0.38) {
       fillCount = 2;
     } else {
       fillCount = 3;
@@ -401,7 +401,7 @@ const PairwiseBallotStep = ({ progress }) => {
     highlightMatchup = -1;
   }
 
-  const isShrinking = activeBallot === 0 ? ballotProgress > 0.82 : (activeBallot <= 2 ? ballotProgress > 0.72 : false);
+  const isShrinking = activeBallot === 0 ? ballotProgress > 0.75 : (activeBallot <= 2 ? ballotProgress > 0.75 : false);
   const allDone = activeBallot >= 3;
 
   return (
@@ -541,7 +541,13 @@ const PrecinctsStep = ({ progress }) => {
   const litSet = new Set(COUNTY_ORDER.slice(0, litCount));
 
   return (
-    <Box>
+    <Box sx={{
+      animation: 'countiesFadeIn 0.8s ease forwards',
+      '@keyframes countiesFadeIn': {
+        from: { opacity: 0, transform: 'translateY(8px)' },
+        to: { opacity: 1, transform: 'translateY(0)' },
+      },
+    }}>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, textAlign: 'center', fontSize: '1.4rem' }}>
         Counties Report
       </Typography>
@@ -734,15 +740,25 @@ const WinnerStep = () => {
 const STEP_LABELS = ['Primary', 'Voting', 'Results', 'Winner'];
 
 // Duration in ms for each step's animation
-const STEP_DURATIONS = [5000, 8000, 8000, 4000];
+const STEP_DURATIONS = [6000, 12000, 9000, 4000];
+const PAUSE_BETWEEN_STEPS = 1000;
 
 // Easing for primary step: slow start, accelerates smoothly
-// Using a single smooth curve — no piecewise kinks
 const primaryEasing = (t) => {
   if (t <= 0) return 0;
   if (t >= 1) return 1;
-  // Ease-in curve: t^1.6 — slow early, faster late
   return Math.pow(t, 1.6);
+};
+
+// Easing for counties step: initial pause, then slow start, then accelerates
+const countiesEasing = (t) => {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  // First 10% of time = nothing happens (pause for fade-in)
+  if (t < 0.1) return 0;
+  // Remap remaining 90% with acceleration
+  const adjusted = (t - 0.1) / 0.9;
+  return Math.pow(adjusted, 1.8);
 };
 
 const ElectionFlowDemo = () => {
@@ -776,7 +792,7 @@ const ElectionFlowDemo = () => {
       const elapsed = timestamp - startTimeRef.current;
       const rawP = Math.min(elapsed / duration, 1);
       // Apply easing for primary step (slow start, accelerates)
-      const p = step === 0 ? primaryEasing(rawP) : rawP;
+      const p = step === 0 ? primaryEasing(rawP) : step === 2 ? countiesEasing(rawP) : rawP;
       setProgress(p);
 
       // For primary step, show elimination after bars are mostly grown
@@ -800,7 +816,7 @@ const ElectionFlowDemo = () => {
     if (autoPlay && hasStarted && !isAnimating && progress >= 1 && currentStep < totalSteps - 1) {
       const timer = setTimeout(() => {
         setCurrentStep(prev => prev + 1);
-      }, 600);
+      }, PAUSE_BETWEEN_STEPS);
       return () => clearTimeout(timer);
     }
     if (autoPlay && currentStep >= totalSteps - 1 && progress >= 1) {
