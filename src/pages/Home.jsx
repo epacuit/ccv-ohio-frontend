@@ -114,16 +114,38 @@ const HomePage = () => {
           }}
         >
           {!isMobile && (
-            <Box
-              sx={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                height: '100%',
-                pr: '49.12px',
-              }}
-            >
+            <>
+              {/* Logo — absolute positioned to match NavigationBar exactly */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: '49.12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <img
+                  src={betterChoicesIcon}
+                  alt="Better Choices for Ohio"
+                  style={{
+                    width: '227.65px',
+                    height: '89.99px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => navigate('/')}
+                />
+              </Box>
+              {/* Menu — right aligned */}
+              <Box
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  height: '100%',
+                  pr: '49.12px',
+                }}
+              >
               <Box sx={{ display: 'flex', gap: 3 }}>
                 {menuItems.map((item) => (
                   <Button 
@@ -136,8 +158,26 @@ const HomePage = () => {
                 ))}
               </Box>
             </Box>
+            </>
           )}
 
+          {isMobile && (
+            <Box
+              sx={{
+                position: 'absolute',
+                left: '20px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <img
+                src={betterChoicesIcon}
+                alt="Better Choices for Ohio"
+                style={{ width: '140px', height: '55px', cursor: 'pointer' }}
+                onClick={() => navigate('/')}
+              />
+            </Box>
+          )}
           {isMobile && (
             <Box
               sx={{
@@ -240,17 +280,17 @@ const HomePage = () => {
         }}
       >
         <Container maxWidth="lg">
-          <Typography 
-            variant="h1" 
-            component="h1" 
-            sx={{ 
+          <Typography
+            variant="h1"
+            component="h1"
+            sx={{
               fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4.5rem' },
               mb: 2,
               color: 'white',
               textShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
           >
-            Consensus Choice
+            Top 3 <strong>+</strong> Head-to-Head
           </Typography>
           
           {/* Better Choices Link */}

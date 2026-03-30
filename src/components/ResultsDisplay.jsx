@@ -247,7 +247,7 @@ const ResultsDisplay = ({
                 fontSize: { xs: '0.75rem', sm: '0.875rem' }
               }}
             >
-              {hasTie ? 'Consensus Choice Winners' : 'Consensus Choice Winner'}
+              {hasTie ? 'Winners' : 'Winner'}
             </Typography>
             
             {hasTie ? (
@@ -398,7 +398,7 @@ const ResultsDisplay = ({
                     {/* CONDORCET */}
                     {winnerType === 'condorcet' && (
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        <strong>{winner}</strong> is the Consensus Choice winner: wins all of their head-to-head matchups.
+                        <strong>{winner}</strong> is the winner: wins all of their head-to-head matchups.
                       </Typography>
                     )}
 

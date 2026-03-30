@@ -19,9 +19,9 @@ const AboutPage = () => {
   // Interactive demo state
   const demoCandidates = useMemo(
     () => [
-      { id: 'alice', name: 'Alice' },
+      { id: 'ana', name: 'Ana' },
       { id: 'bob', name: 'Bob' },
-      { id: 'carol', name: 'Carol' },
+      { id: 'carla', name: 'Carla' },
     ],
     []
   );
@@ -30,9 +30,9 @@ const AboutPage = () => {
   // Calculate demo results from selections
   const demoResults = useMemo(() => {
     const matchups = [
-      { key: 'alice_vs_bob', c1: 'Alice', c2: 'Bob' },
-      { key: 'alice_vs_carol', c1: 'Alice', c2: 'Carol' },
-      { key: 'bob_vs_carol', c1: 'Bob', c2: 'Carol' },
+      { key: 'ana_vs_bob', c1: 'Ana', c2: 'Bob' },
+      { key: 'ana_vs_carla', c1: 'Ana', c2: 'Carla' },
+      { key: 'bob_vs_carla', c1: 'Bob', c2: 'Carla' },
     ];
 
     const results = [];
@@ -49,7 +49,7 @@ const AboutPage = () => {
     });
 
     // Check for a candidate who beats everyone
-    const winsCount = { Alice: 0, Bob: 0, Carol: 0 };
+    const winsCount = { Ana: 0, Bob: 0, Carla: 0 };
     results.forEach(r => {
       if (r.winner !== 'Tie' && winsCount[r.winner] !== undefined) {
         winsCount[r.winner]++;
@@ -76,7 +76,7 @@ const AboutPage = () => {
               fontSize: { xs: '1.75rem', sm: '3rem' },
             }}
           >
-            How Consensus Choice Works
+            How It Works
           </Typography>
           <Typography
             variant="h6"
@@ -88,7 +88,7 @@ const AboutPage = () => {
               fontSize: { xs: '1rem', sm: '1.25rem' },
             }}
           >
-            Consensus Choice finds the candidate with the broadest support by comparing
+            Top 3 <strong>+</strong> Head-to-Head finds the candidate with the broadest support by comparing
             every finalist head-to-head.
           </Typography>
         </Box>
@@ -175,7 +175,7 @@ const AboutPage = () => {
               </Box>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: textColor, fontSize: '1.15rem' }}>
-                  The Consensus Choice Winner
+                  The Winner
                 </Typography>
                 <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.75 }}>
                   The candidate that wins each of their head-to-head matchups is the winner.
@@ -230,9 +230,9 @@ const AboutPage = () => {
               </Typography>
 
               {[
-                { key: 'alice_vs_bob', c1: 'Alice', c2: 'Bob' },
-                { key: 'alice_vs_carol', c1: 'Alice', c2: 'Carol' },
-                { key: 'bob_vs_carol', c1: 'Bob', c2: 'Carol' },
+                { key: 'ana_vs_bob', c1: 'Ana', c2: 'Bob' },
+                { key: 'ana_vs_carla', c1: 'Ana', c2: 'Carla' },
+                { key: 'bob_vs_carla', c1: 'Bob', c2: 'Carla' },
               ].map((m) => {
                 const sel = demoSelections[m.key];
                 let label, color;

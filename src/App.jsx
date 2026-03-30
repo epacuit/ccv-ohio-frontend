@@ -34,8 +34,8 @@ const AppContent = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Conditionally render NavigationBar only if not embedded */}
-      {!isEmbedded && <NavigationBar />}
+      {/* Hide NavigationBar on home page (it has its own) and when embedded */}
+      {!isEmbedded && location.pathname !== '/' && <NavigationBar />}
       
       <Box component="main" sx={{ flexGrow: 1 }}>
         <Routes>

@@ -24,9 +24,9 @@ import { OHIO_COUNTIES, OHIO_SVG_WIDTH, OHIO_SVG_HEIGHT } from '../assets/ohioCo
 // ============================================================
 
 const ALL_CANDIDATES = [
-  { name: 'Ann', color: '#7B1FA2' },    // Purple (winner)
+  { name: 'Ana', color: '#7B1FA2' },    // Purple (winner)
   { name: 'Bob', color: '#00695C' },    // Teal
-  { name: 'Carol', color: '#E65100' },  // Burnt orange
+  { name: 'Carla', color: '#E65100' },  // Burnt orange
   { name: 'Dan', color: '#43A047' },    // Medium green
   { name: 'Eve', color: '#546E7A' },    // Steel grey
   { name: 'Frank', color: '#5D4037' },  // Warm brown
@@ -38,13 +38,13 @@ const ALL_CANDIDATES = [
 // Lower exponent = faster early growth. Higher = slower start, late surge.
 // Designed so lead changes happen naturally:
 //   t~0.05: Dan leads (fast early curve + decent final %)
-//   t~0.15: Ann overtakes Dan
-//   t~0.60: Carol leads Bob
-//   t~0.80: Bob surges past Carol
+//   t~0.15: Ana overtakes Dan
+//   t~0.60: Carla leads Bob
+//   t~0.80: Bob surges past Carla
 const PRIMARY_CANDIDATES = [
-  { name: 'Ann',   final: 28, exp: 0.8  },  // Steady strong growth
+  { name: 'Ana',   final: 28, exp: 0.8  },  // Steady strong growth
   { name: 'Bob',   final: 24, exp: 1.8  },  // Very slow start, big late surge
-  { name: 'Carol', final: 19, exp: 0.75 },  // Solid early, holds steady
+  { name: 'Carla', final: 19, exp: 0.75 },  // Solid early, holds steady
   { name: 'Dan',   final: 10, exp: 0.35 },  // Very fast early, leads briefly
   { name: 'Eve',   final: 8,  exp: 1.1  },  // Slightly late bloomer
   { name: 'Frank', final: 5,  exp: 0.5  },  // Quick early showing
@@ -52,14 +52,14 @@ const PRIMARY_CANDIDATES = [
   { name: 'Hank',  final: 2,  exp: 0.4  },  // Fast start, tiny total
 ];
 
-const TOP_3 = ['Ann', 'Bob', 'Carol'];
+const TOP_3 = ['Ana', 'Bob', 'Carla'];
 
 // Final head-to-head results
-// Ann beats Bob 54-46, Ann beats Carol 52-48, Carol beats Bob 53-47
+// Ana beats Bob 54-46, Ana beats Carla 52-48, Carla beats Bob 53-47
 const FINAL_H2H = [
-  { label: 'Ann vs Bob', winner: 'Ann', winPct: 54, losePct: 46, winColor: '#9C27B0', loseColor: '#00897B', loser: 'Bob' },
-  { label: 'Ann vs Carol', winner: 'Ann', winPct: 52, losePct: 48, winColor: '#9C27B0', loseColor: '#EF6C00', loser: 'Carol' },
-  { label: 'Bob vs Carol', winner: 'Carol', winPct: 53, losePct: 47, winColor: '#EF6C00', loseColor: '#00897B', loser: 'Bob' },
+  { label: 'Ana vs Bob', winner: 'Ana', winPct: 54, losePct: 46, winColor: '#9C27B0', loseColor: '#00897B', loser: 'Bob' },
+  { label: 'Ana vs Carla', winner: 'Ana', winPct: 52, losePct: 48, winColor: '#9C27B0', loseColor: '#EF6C00', loser: 'Carla' },
+  { label: 'Bob vs Carla', winner: 'Carla', winPct: 53, losePct: 47, winColor: '#EF6C00', loseColor: '#00897B', loser: 'Bob' },
 ];
 
 // Deterministic shuffle of county indices for animation order
@@ -228,7 +228,7 @@ const PrimaryStep = ({ progress, showElimination }) => {
 
       <Box sx={{ textAlign: 'center', mt: 2, opacity: showElimination ? 1 : 0, transition: 'opacity 0.6s ease', height: 28 }}>
         <Typography variant="body1" sx={{ fontWeight: 600, color: 'primary.main' }}>
-          Advancing to the general election: Ann, Bob, and Carol
+          Advancing to the general election: Ana, Bob, and Carla
         </Typography>
       </Box>
     </Box>
@@ -240,18 +240,18 @@ const PrimaryStep = ({ progress, showElimination }) => {
 // ----------------------------------------------------------------
 
 const BALLOT_MATCHUPS = [
-  { cand1: 'Ann', cand2: 'Bob' },
-  { cand1: 'Ann', cand2: 'Carol' },
-  { cand1: 'Bob', cand2: 'Carol' },
+  { cand1: 'Ana', cand2: 'Bob' },
+  { cand1: 'Ana', cand2: 'Carla' },
+  { cand1: 'Bob', cand2: 'Carla' },
 ];
 
 // 3 voters' choices
 const BALLOT_VOTERS = [
-  // Voter 1: Ann > Bob, Ann > Carol, Carol > Bob
+  // Voter 1: Ana > Bob, Ana > Carla, Carla > Bob
   [{ c1: true, c2: false }, { c1: true, c2: false }, { c1: false, c2: true }],
-  // Voter 2: Bob > Ann, Ann > Carol, Bob > Carol
+  // Voter 2: Bob > Ana, Ana > Carla, Bob > Carla
   [{ c1: false, c2: true }, { c1: true, c2: false }, { c1: true, c2: false }],
-  // Voter 3: Ann > Bob, Carol > Ann, Carol > Bob
+  // Voter 3: Ana > Bob, Carla > Ana, Carla > Bob
   [{ c1: true, c2: false }, { c1: false, c2: true }, { c1: false, c2: true }],
 ];
 
@@ -658,7 +658,7 @@ const WinnerStep = () => {
       },
     }}>
       <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, textAlign: 'center', fontSize: '1.4rem' }}>
-        The Consensus Choice Winner
+        The Winner
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
         The candidate who wins every head-to-head comparison.
@@ -668,14 +668,14 @@ const WinnerStep = () => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1.5 }}>
         <TrophyIcon sx={{ fontSize: 44, color: annColor }} />
         <Typography variant="h3" sx={{ fontWeight: 700, color: annColor }}>
-          Ann
+          Ana
         </Typography>
       </Box>
 
       {/* Head-to-head bars */}
       <Box sx={{ maxWidth: 360, mx: 'auto' }}>
         {FINAL_H2H.map((bar, idx) => {
-          const isAnnMatchup = bar.winner === 'Ann';
+          const isAnaMatchup = bar.winner === 'Ana';
           return (
             <Box
               key={idx}
@@ -685,8 +685,8 @@ const WinnerStep = () => {
                 py: 0.75,
                 borderRadius: 1,
                 border: '1px solid',
-                borderColor: isAnnMatchup ? alpha(annColor, 0.3) : 'divider',
-                bgcolor: isAnnMatchup ? alpha(annColor, 0.04) : 'transparent',
+                borderColor: isAnaMatchup ? alpha(annColor, 0.3) : 'divider',
+                bgcolor: isAnaMatchup ? alpha(annColor, 0.04) : 'transparent',
               }}
             >
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.25 }}>
@@ -718,8 +718,8 @@ const WinnerStep = () => {
                 <Box sx={{ width: `${bar.losePct}%`, bgcolor: bar.loseColor }} />
               </Box>
               <Typography variant="caption" sx={{
-                color: isAnnMatchup ? annColor : 'text.secondary',
-                fontWeight: isAnnMatchup ? 500 : 400,
+                color: isAnaMatchup ? annColor : 'text.secondary',
+                fontWeight: isAnaMatchup ? 500 : 400,
                 mt: 0.25,
                 display: 'block',
               }}>
