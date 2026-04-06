@@ -331,27 +331,55 @@ const PairwiseBallotViewer = ({ pollId, isOpen, onClose }) => {
 
             {/* Tabs for filtered groups */}
             {focusMatchup && (
-              <Tabs
-                value={activeTab}
-                onChange={(e, v) => setActiveTab(v)}
-                sx={{
-                  mb: 2,
-                  '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, minHeight: 40 },
-                }}
-                variant="fullWidth"
-              >
-                <Tab
-                  label={`${focusMatchup.cand1.name} (${countVotes(filteredBallots.cand1Wins || [])})`}
-                  sx={{ color: 'success.main' }}
-                />
-                <Tab
-                  label={`${focusMatchup.cand2.name} (${countVotes(filteredBallots.cand2Wins || [])})`}
-                  sx={{ color: 'success.main' }}
-                />
-                <Tab
-                  label={`Tie/Skip (${countVotes(filteredBallots.tieOrNeither || [])})`}
-                />
-              </Tabs>
+              <>
+                {(() => {
+                  const cand1Votes = countVotes(filteredBallots.cand1Wins || []);
+                  const cand2Votes = countVotes(filteredBallots.cand2Wins || []);
+                  const margin = Math.abs(cand1Votes - cand2Votes);
+                  const winner = cand1Votes > cand2Votes ? focusMatchup.cand1.name : focusMatchup.cand2.name;
+                  const loser = cand1Votes > cand2Votes ? focusMatchup.cand2.name : focusMatchup.cand1.name;
+                  const winnerVotes = Math.max(cand1Votes, cand2Votes);
+                  const loserVotes = Math.min(cand1Votes, cand2Votes);
+
+                  return (
+                    <Paper
+                      variant="outlined"
+                      sx={{ p: 1.5, mb: 2, textAlign: 'center', backgroundColor: 'grey.50' }}
+                    >
+                      {cand1Votes === cand2Votes ? (
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {focusMatchup.cand1.name} and {focusMatchup.cand2.name} are tied: {cand1Votes} - {cand2Votes}
+                        </Typography>
+                      ) : (
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {winner} defeats {loser} by a margin of {winnerVotes} - {loserVotes} = {margin}
+                        </Typography>
+                      )}
+                    </Paper>
+                  );
+                })()}
+                <Tabs
+                  value={activeTab}
+                  onChange={(e, v) => setActiveTab(v)}
+                  sx={{
+                    mb: 2,
+                    '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, minHeight: 40 },
+                  }}
+                  variant="fullWidth"
+                >
+                  <Tab
+                    label={`${focusMatchup.cand1.name} (${countVotes(filteredBallots.cand1Wins || [])})`}
+                    sx={{ color: 'success.main' }}
+                  />
+                  <Tab
+                    label={`${focusMatchup.cand2.name} (${countVotes(filteredBallots.cand2Wins || [])})`}
+                    sx={{ color: 'success.main' }}
+                  />
+                  <Tab
+                    label={`Tie/Skip (${countVotes(filteredBallots.tieOrNeither || [])})`}
+                  />
+                </Tabs>
+              </>
             )}
 
             {/* Navigation */}
