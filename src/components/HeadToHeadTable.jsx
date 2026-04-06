@@ -317,7 +317,7 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
                     minWidth: winnerPercentage > 15 ? 'auto' : 0,
                   }}
                 >
-                  {winnerPercentage >= 15 && `${Math.round(winnerPercentage)}%`}
+                  {winnerPercentage >= 15 && `${winnerPercentage.toFixed(1)}%`}
                 </Box>
               )}
               
@@ -336,7 +336,7 @@ const HeadToHeadTable = ({ results, winnerColor }) => {
                     minWidth: loserPercentage > 15 ? 'auto' : 0,
                   }}
                 >
-                  {loserPercentage >= 15 && `${Math.round(loserPercentage)}%`}
+                  {loserPercentage >= 15 && `${loserPercentage.toFixed(1)}%`}
                 </Box>
               )}
             </Box>
