@@ -18,6 +18,8 @@ import MyPolls from './pages/MyPolls';
 import AboutPage from './pages/About';
 import NotFound from './pages/NotFound';
 import Overview from './pages/Overview';
+import CompareMethods from './pages/CompareMethods';
+import CompareWalkthrough from './pages/CompareWalkthrough';
 
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 // Component to detect embedding status from URL
@@ -49,6 +51,8 @@ const AppContent = () => {
           <Route path="/my-polls/:email" element={<MyPolls />} />
           <Route path="/admin/:pollId" element={<Admin />} />
           <Route path="/overview" element={<Overview />} />
+          <Route path="/compare-methods" element={<CompareMethods />} />
+          <Route path="/compare-methods/walkthrough" element={<CompareWalkthrough />} />
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
