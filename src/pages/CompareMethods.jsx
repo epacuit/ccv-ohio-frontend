@@ -57,12 +57,12 @@ const PRESETS = [
   },
   {
     key: 'plurality-vs-irv',
-    name: 'Synthetic: Plurality winner loses in IRV',
+    name: 'Sample Election 1',
     csv: pluralityVsIrvCsvRaw,
   },
   {
     key: 'three-winners',
-    name: 'Synthetic: Three different winners (Plurality, IRV, Head-to-Head)',
+    name: 'Sample Election 2',
     csv: threeWinnersCsvRaw,
   },
 ];
