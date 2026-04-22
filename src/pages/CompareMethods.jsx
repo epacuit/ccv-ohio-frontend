@@ -208,18 +208,23 @@ const WALKTHROUGH_BALLOTS = {
   ],
   4: [
     { count: 3500, ranking: { Ana: 1, Carla: 2, Bob: 3, David: 4 } },
-    { count: 2700, ranking: { Bob: 1, Carla: 2, Ana: 3, David: 4 } },
-    { count: 2000, ranking: { Carla: 1, Bob: 2, Ana: 3, David: 4 } },
-    { count:  900, ranking: { David: 1, Bob: 2, Ana: 3, Carla: 4 } },
-    { count:  500, ranking: { David: 1, Carla: 2, Ana: 3, Bob: 4 } },
-    { count:  400, ranking: { David: 1 } }, // bullet vote → exhausts when David is eliminated
+    { count: 2000, ranking: { Bob: 1, David: 2, Carla: 3, Ana: 4 } },
+    { count:  700, ranking: { Bob: 1, Carla: 2, Ana: 3, David: 4 } },
+    { count: 1500, ranking: { Carla: 1, Bob: 2, Ana: 3, David: 4 } },
+    { count:  500, ranking: { Carla: 1, David: 2, Ana: 3, Bob: 4 } },
+    { count: 1000, ranking: { David: 1, Bob: 2, Carla: 3, Ana: 4 } },
+    { count:  500, ranking: { David: 1, Ana: 2, Carla: 3, Bob: 4 } },
+    { count:  300, ranking: { David: 1 } }, // bullet vote → exhausts when David is eliminated
   ],
   5: [
     { count: 3200, ranking: { Ana: 1, Carla: 2, Bob: 3, David: 4, Esther: 5 } },
-    { count: 2500, ranking: { Bob: 1, Carla: 2, Ana: 3, Esther: 4, David: 5 } },
+    { count: 1500, ranking: { Bob: 1, Carla: 2, Ana: 3, Esther: 4, David: 5 } },
+    { count:  500, ranking: { Bob: 1, David: 2, Carla: 3, Ana: 4, Esther: 5 } },
+    { count:  500, ranking: { Bob: 1, Esther: 2, David: 3, Carla: 4, Ana: 5 } },
     { count: 1500, ranking: { Carla: 1, Bob: 2, Ana: 3, Esther: 4, David: 5 } },
     { count:  300, ranking: { Carla: 1, Bob: 2 } }, // partial
-    { count: 1200, ranking: { David: 1, Bob: 2, Carla: 3, Ana: 4, Esther: 5 } },
+    { count:  700, ranking: { David: 1, Bob: 2, Carla: 3, Ana: 4, Esther: 5 } },
+    { count:  500, ranking: { David: 1, Esther: 2, Ana: 3, Carla: 4, Bob: 5 } },
     { count:  300, ranking: { David: 1 } }, // bullet vote
     { count:  600, ranking: { Esther: 1, Carla: 2, Bob: 3, Ana: 4, David: 5 } },
     { count:  400, ranking: { Esther: 1, Carla: 2 } }, // partial → exhausts when both E and C are out
@@ -1336,7 +1341,7 @@ const Step6Reporting = ({ data }) => {
             {reportSection(
               'Summary',
               <Box>
-                {summaryRow('Total ballots', data.total_ballots.toLocaleString())}
+                {summaryRow('Ballots received', (data.total_ballots + (data.overvotes || 0) + (data.undervotes || 0)).toLocaleString())}
                 {summaryRow('Candidates', data.candidates.length)}
                 {summaryRow('Winner', data.condorcet_winner || 'no Condorcet winner')}
                 {summaryRow('Method', 'Head-to-Head')}
